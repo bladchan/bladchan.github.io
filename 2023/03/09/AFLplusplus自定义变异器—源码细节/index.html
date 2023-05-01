@@ -19,7 +19,7 @@
     <meta name="description" content="AFL++自定义变异器 支持C&#x2F;C++库和Python模式 C&#x2F;C++ library (*.so) Python module    1. 简介相关注意事项：  custom_mutator_stage在确定性变异之后启用； 在使用C&#x2F;C++接口时，需要引入一个动态链接库（动态库路径存放在环境变量AFL_CUSTOM_MUTATOR_LIBRARY中），该库（部分）定义AFL++暴露出来的接口">
 <meta property="og:type" content="article">
 <meta property="og:title" content="AFLplusplus自定义变异器—源码细节">
-<meta property="og:url" content="http://example.com/2023/03/09/AFLplusplus%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%98%E5%BC%82%E5%99%A8%E2%80%94%E6%BA%90%E7%A0%81%E7%BB%86%E8%8A%82/index.html">
+<meta property="og:url" content="http://bladchan.github.io/2023/03/09/AFLplusplus%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%98%E5%BC%82%E5%99%A8%E2%80%94%E6%BA%90%E7%A0%81%E7%BB%86%E8%8A%82/index.html">
 <meta property="og:site_name" content="chan&#39;s blog">
 <meta property="og:description" content="AFL++自定义变异器 支持C&#x2F;C++库和Python模式 C&#x2F;C++ library (*.so) Python module    1. 简介相关注意事项：  custom_mutator_stage在确定性变异之后启用； 在使用C&#x2F;C++接口时，需要引入一个动态链接库（动态库路径存放在环境变量AFL_CUSTOM_MUTATOR_LIBRARY中），该库（部分）定义AFL++暴露出来的接口">
 <meta property="og:locale" content="zh_CN">
@@ -75,7 +75,7 @@
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
     Fluid.ctx = Object.assign({}, Fluid.ctx)
-    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.4","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+    var CONFIG = {"hostname":"bladchan.github.io","root":"/","version":"1.9.4","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
 
     if (CONFIG.web_analytics.follow_dnt) {
       var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
@@ -427,7 +427,7 @@
   <div class="license-box my-3">
     <div class="license-title">
       <div>AFLplusplus自定义变异器—源码细节</div>
-      <div>http://example.com/2023/03/09/AFLplusplus自定义变异器—源码细节/</div>
+      <div>http://bladchan.github.io/2023/03/09/AFLplusplus自定义变异器—源码细节/</div>
     </div>
     <div class="license-meta">
       
