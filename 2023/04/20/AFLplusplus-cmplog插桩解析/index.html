@@ -1,0 +1,748 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="bladchan">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="AFL++’s Cmplog插桩1. 源码解析afl-cc.c 代码片段：  123456789101112131415161718192021222324252627	if (cmplog_mode) {      cc_params[cc_par_cnt++] &#x3D; &quot;-fno-inline&quot;;#if LLVM_MAJOR &gt;&#x3D; 11">
+<meta property="og:type" content="article">
+<meta property="og:title" content="AFLplusplus cmplog插桩解析">
+<meta property="og:url" content="http://example.com/2023/04/20/AFLplusplus-cmplog%E6%8F%92%E6%A1%A9%E8%A7%A3%E6%9E%90/index.html">
+<meta property="og:site_name" content="chan&#39;s blog">
+<meta property="og:description" content="AFL++’s Cmplog插桩1. 源码解析afl-cc.c 代码片段：  123456789101112131415161718192021222324252627	if (cmplog_mode) {      cc_params[cc_par_cnt++] &#x3D; &quot;-fno-inline&quot;;#if LLVM_MAJOR &gt;&#x3D; 11">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/2705.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/2b50.png?v8">
+<meta property="article:published_time" content="2023-04-20T09:09:19.000Z">
+<meta property="article:modified_time" content="2023-05-01T09:15:15.283Z">
+<meta property="article:author" content="bladchan">
+<meta property="article:tag" content="模糊测试">
+<meta property="article:tag" content="AFL++">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://github.githubassets.com/images/icons/emoji/unicode/2705.png?v8">
+  
+  
+  
+  <title>AFLplusplus cmplog插桩解析 - chan&#39;s blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.4","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.3.0">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+</head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Chan&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/">
+                <i class="iconfont icon-link-fill"></i>
+                <span>友链</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="AFLplusplus cmplog插桩解析"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-04-20 17:09" pubdate>
+          2023年4月20日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          11k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          95 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">AFLplusplus cmplog插桩解析</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="AFL-’s-Cmplog插桩"><a href="#AFL-’s-Cmplog插桩" class="headerlink" title="AFL++’s Cmplog插桩"></a>AFL++’s Cmplog插桩</h1><h2 id="1-源码解析"><a href="#1-源码解析" class="headerlink" title="1. 源码解析"></a>1. 源码解析</h2><h3 id="afl-cc-c"><a href="#afl-cc-c" class="headerlink" title="afl-cc.c"></a>afl-cc.c</h3><ul>
+<li>代码片段：</li>
+</ul>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><code class="hljs c">	<span class="hljs-keyword">if</span> (cmplog_mode) {<br><br>      cc_params[cc_par_cnt++] = <span class="hljs-string">"-fno-inline"</span>;<br><br><span class="hljs-meta">#<span class="hljs-keyword">if</span> LLVM_MAJOR &gt;= 11                                <span class="hljs-comment">/* use new pass manager */</span></span><br>      cc_params[cc_par_cnt++] = <span class="hljs-string">"-fexperimental-new-pass-manager"</span>;<br>      cc_params[cc_par_cnt++] =<br>          alloc_printf(<span class="hljs-string">"-fpass-plugin=%s/cmplog-switches-pass.so"</span>, obj_path);<br>      cc_params[cc_par_cnt++] = <span class="hljs-string">"-fexperimental-new-pass-manager"</span>;<br>      cc_params[cc_par_cnt++] =<br>          alloc_printf(<span class="hljs-string">"-fpass-plugin=%s/split-switches-pass.so"</span>, obj_path);<br><span class="hljs-meta">#<span class="hljs-keyword">else</span></span><br>      cc_params[cc_par_cnt++] = <span class="hljs-string">"-Xclang"</span>;<br>      cc_params[cc_par_cnt++] = <span class="hljs-string">"-load"</span>;<br>      cc_params[cc_par_cnt++] = <span class="hljs-string">"-Xclang"</span>;<br>      cc_params[cc_par_cnt++] =<br>          alloc_printf(<span class="hljs-string">"%s/cmplog-switches-pass.so"</span>, obj_path);<br><br>      <span class="hljs-comment">// reuse split switches from laf</span><br>      cc_params[cc_par_cnt++] = <span class="hljs-string">"-Xclang"</span>;<br>      cc_params[cc_par_cnt++] = <span class="hljs-string">"-load"</span>;<br>      cc_params[cc_par_cnt++] = <span class="hljs-string">"-Xclang"</span>;<br>      cc_params[cc_par_cnt++] =<br>          alloc_printf(<span class="hljs-string">"%s/split-switches-pass.so"</span>, obj_path);<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br><br>    }<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li><code>cmplog-switches-pass.so</code>和<code>split-switches-pass.so</code>是两个关键的动态共享库</li>
+</ul>
+<h3 id="cmplog-switches-pass-cc"><a href="#cmplog-switches-pass-cc" class="headerlink" title="cmplog-switches-pass.cc"></a>cmplog-switches-pass.cc</h3><ul>
+<li><p>CmplogSwitches类：</p>
+<ul>
+<li><p>构造函数：initInstrumentList()  ==&gt; 从环境变量 <code>AFL_LLVM_ALLOWLIST</code>/<code>AFL_LLVM_DENYLIST</code> <strong>解析</strong>白名单/黑名单</p>
+</li>
+<li><p><code>runOnModule() / run()</code> (LLVM &gt;= 11)</p>
+</li>
+<li><p><code>getPassName()</code>  ==&gt;  返回字符串 “cmplog switch split”，表示该Pass名字</p>
+</li>
+<li><p>私有方法：<code>hookInstrs()</code> ?</p>
+</li>
+</ul>
+</li>
+<li><p><code>hookInstrs()</code>：</p>
+<ul>
+<li><p>代码片段：</p>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-meta">#<span class="hljs-keyword">if</span> LLVM_VERSION_MAJOR &gt;= 9</span><br>  FunctionCallee<br><span class="hljs-meta">#<span class="hljs-keyword">else</span></span><br>  Constant *<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>      c1 = M.<span class="hljs-built_in">getOrInsertFunction</span>(<span class="hljs-string">"__cmplog_ins_hook1"</span>, VoidTy, Int8Ty, Int8Ty,<br>                                 Int8Ty<br><span class="hljs-meta">#<span class="hljs-keyword">if</span> LLVM_VERSION_MAJOR &lt; 5</span><br>                                 ,<br>                                 <span class="hljs-literal">NULL</span><br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>      );<br>...<br></code></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>c1、c2、c4、c8 ==&gt; <code>__cmplog_ins_hook1()</code> 、<code>__cmplog_ins_hook2()</code> 、<code>__cmplog_ins_hook4()</code>、<code>__cmplog_ins_hook8()</code></p>
+<ul>
+<li>hook函数在<code>afl-compiler-rt.o.c</code>中被定义</li>
+<li>这里创建相应的函数函数</li>
+<li>插桩函数分析 <span class="github-emoji"><span>✅</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/2705.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span></li>
+</ul>
+</li>
+<li><p><code>__afl_cmp_map</code>：</p>
+<ul>
+<li>cmp引入的位图</li>
+<li>作用？</li>
+</ul>
+</li>
+<li><p>遍历IR中所有SwitchInst指令，将<strong>NumCases&gt;1</strong>的指令保存到switches向量中，调用vector的erase()和std::remove()完成SwitchInst指令的去重</p>
+</li>
+<li><p>然后遍历每一个SwitchInst指令（SI）：</p>
+<ul>
+<li>跳过SI当：1. 整数比特宽度&lt;16的条件分支（太简单了，很容易变异到） 或 2. Case数为0？</li>
+<li>当比特宽度模8不为0时，比特宽度取值向上取整为8的整数倍，同时需要做强制类型转换（cast）</li>
+<li>进行插桩，主要就是将<strong>条件值</strong>、<strong>case比较值</strong>和<strong>一个常数1</strong>传递给hook函数，伪代码大致如下：</li>
+</ul>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-keyword">if</span>(__afl_cmp_map){<br>    <span class="hljs-comment">// 是否需要强制类型转换?</span><br>    <span class="hljs-comment">// e.g. for case 1:</span><br>    __cmplog_ins_hook1((cast_size) condition, (cast_size) caseValue1, <span class="hljs-number">1</span>);<br>    __cmplog_ins_hook2((cast_size) condition, (cast_size) caseValue2, <span class="hljs-number">1</span>);<br>    ...<br>}<br></code></pre></td></tr></tbody></table></figure></li>
+</ul>
+</li>
+</ul>
+<hr>
+<ul>
+<li><code>runOnModule()</code><ul>
+<li>调用<code>hookInstrs()</code>函数</li>
+</ul>
+</li>
+</ul>
+<h3 id="split-switches-pass-so-cc"><a href="#split-switches-pass-so-cc" class="headerlink" title="split-switches-pass.so.cc"></a>split-switches-pass.so.cc</h3><ul>
+<li><p>SplitSwitchesTransform类：</p>
+<ul>
+<li>构造函数：initInstrumentList()  ==&gt; 从环境变量 <code>AFL_LLVM_ALLOWLIST</code>/<code>AFL_LLVM_DENYLIST</code> <strong>解析</strong>白名单/黑名单</li>
+<li><code>runOnModule() / run()</code> (LLVM &gt;= 11)</li>
+<li><code>getPassName()</code>  ==&gt;  返回字符串 “splits switch constructs”，表示该Pass名字</li>
+<li>CaseExpr结构体： 建立Case值到基本块的映射，CaseVector用来存储CaseExpr信息</li>
+<li>私有方法：1、splitSwitches (bool)； 2、transformCmps (bool)；3、switchConvert<span class="github-emoji"><span>⭐</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/2b50.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span></li>
+</ul>
+</li>
+<li><p><code>runOnModule() / run()</code>：</p>
+<ul>
+<li>调用<code>splitSwitches(&amp;M);</code></li>
+</ul>
+</li>
+<li><p><code>splitSwitches()</code>：</p>
+<ul>
+<li>遍历模块中的所有基本块，找到所有的switch指令，并保存到switches数组中，跳过NumCase&lt;1的分支</li>
+<li>遍历每一个switch语句，具体来说：</li>
+</ul>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">auto</span> &amp;SI : switches) {<br><br>    BasicBlock *CurBlock = SI-&gt;<span class="hljs-built_in">getParent</span>();<br>    BasicBlock *OrigBlock = CurBlock;<br>    Function *  F = CurBlock-&gt;<span class="hljs-built_in">getParent</span>();<br>    <span class="hljs-comment">/* this is the value we are switching on */</span><br>    Value *     Val = SI-&gt;<span class="hljs-built_in">getCondition</span>();<br>    BasicBlock *Default = SI-&gt;<span class="hljs-built_in">getDefaultDest</span>();<br>    <span class="hljs-type">unsigned</span>    bitw = Val-&gt;<span class="hljs-built_in">getType</span>()-&gt;<span class="hljs-built_in">getIntegerBitWidth</span>();<br><br>    <span class="hljs-comment">/*</span><br><span class="hljs-comment">        if (!be_quiet)</span><br><span class="hljs-comment">          errs() &lt;&lt; "switch: " &lt;&lt; SI-&gt;getNumCases() &lt;&lt; " cases " &lt;&lt; bitw</span><br><span class="hljs-comment">                 &lt;&lt; " bit\n";</span><br><span class="hljs-comment">    */</span><br><br>    <span class="hljs-comment">/* If there is only the default destination or the condition checks 8 bit or</span><br><span class="hljs-comment">     * less, don't bother with the code below. */</span><br>    <span class="hljs-keyword">if</span> (SI-&gt;<span class="hljs-built_in">getNumCases</span>() &lt; <span class="hljs-number">2</span> || bitw % <span class="hljs-number">8</span> || bitw &gt; <span class="hljs-number">64</span>) {<br><br>      <span class="hljs-comment">// if (!be_quiet) errs() &lt;&lt; "skip switch..\n";</span><br>      <span class="hljs-keyword">continue</span>;<br><br>    }<br><br>    <span class="hljs-comment">/* Create a new, empty default block so that the new hierarchy of</span><br><span class="hljs-comment">     * if-then statements go to this and the PHI nodes are happy.</span><br><span class="hljs-comment">     * if the default block is set as an unreachable we avoid creating one</span><br><span class="hljs-comment">     * because will never be a valid target.*/</span><br>    BasicBlock *NewDefault = <span class="hljs-literal">nullptr</span>;<br>    NewDefault = BasicBlock::<span class="hljs-built_in">Create</span>(SI-&gt;<span class="hljs-built_in">getContext</span>(), <span class="hljs-string">"NewDefault"</span>, F, Default); <span class="hljs-comment">// 在基本块Default前面插入一个名为NewDefault的基本块。创建新基本块的目的是啥？</span><br>    BranchInst::<span class="hljs-built_in">Create</span>(Default, NewDefault);  <span class="hljs-comment">// 创建 NewDefault ==&gt; Default 的控制流</span><br><br>    <span class="hljs-comment">/* Prepare cases vector. */</span><br>    CaseVector Cases;<br>    <span class="hljs-keyword">for</span> (SwitchInst::CaseIt i = SI-&gt;<span class="hljs-built_in">case_begin</span>(), e = SI-&gt;<span class="hljs-built_in">case_end</span>(); i != e;<br>         ++i)<br><span class="hljs-meta">#<span class="hljs-keyword">if</span> LLVM_VERSION_MAJOR &gt;= 5</span><br>      Cases.<span class="hljs-built_in">push_back</span>(<span class="hljs-built_in">CaseExpr</span>(i-&gt;<span class="hljs-built_in">getCaseValue</span>(), i-&gt;<span class="hljs-built_in">getCaseSuccessor</span>()));  <span class="hljs-comment">// getCaseSuccessor() 获取与case相关联的基本块指针</span><br><span class="hljs-meta">#<span class="hljs-keyword">else</span></span><br>      Cases.<span class="hljs-built_in">push_back</span>(<span class="hljs-built_in">CaseExpr</span>(i.<span class="hljs-built_in">getCaseValue</span>(), i.<span class="hljs-built_in">getCaseSuccessor</span>()));<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>    <span class="hljs-comment">/* bugfix thanks to pbst</span><br><span class="hljs-comment">     * round up bytesChecked (in case getBitWidth() % 8 != 0) */</span><br>    <span class="hljs-function">std::vector&lt;<span class="hljs-type">bool</span>&gt; <span class="hljs-title">bytesChecked</span><span class="hljs-params">((<span class="hljs-number">7</span> + Cases[<span class="hljs-number">0</span>].Val-&gt;getBitWidth()) / <span class="hljs-number">8</span>,</span></span><br><span class="hljs-params"><span class="hljs-function">                                   <span class="hljs-literal">false</span>)</span></span>;<br>    BasicBlock *      SwitchBlock =<br>        switchConvert(Cases, bytesChecked, OrigBlock, NewDefault, Val, <span class="hljs-number">0</span>);  <span class="hljs-comment">// 调用switchConvert()</span><br><br>    <span class="hljs-comment">/* Branch to our shiny new if-then stuff... */</span><br>    BranchInst::<span class="hljs-built_in">Create</span>(SwitchBlock, OrigBlock);			<span class="hljs-comment">// 创建新的控制流，新创建的SwitchBlock块 --&gt; OrigBlock</span><br><br>    <span class="hljs-comment">/* We are now done with the switch instruction, delete it. */</span><br>    CurBlock-&gt;<span class="hljs-built_in">getInstList</span>().<span class="hljs-built_in">erase</span>(SI);					<span class="hljs-comment">// 删除原switch语句？ 也就是将原switch替换为SwitchBlock</span><br><br>    <span class="hljs-comment">/* we have to update the phi nodes! */</span>				<span class="hljs-comment">// 更新phi节点？</span><br>    <span class="hljs-keyword">for</span> (BasicBlock::iterator I = Default-&gt;<span class="hljs-built_in">begin</span>(); I != Default-&gt;<span class="hljs-built_in">end</span>(); ++I) {<br><br>      <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">isa</span>&lt;PHINode&gt;(&amp;*I)) { <span class="hljs-keyword">continue</span>; }<br>      PHINode *PN = <span class="hljs-built_in">cast</span>&lt;PHINode&gt;(I);<br><br>      <span class="hljs-comment">/* Only update the first occurrence. */</span><br>      <span class="hljs-type">unsigned</span> Idx = <span class="hljs-number">0</span>, E = PN-&gt;<span class="hljs-built_in">getNumIncomingValues</span>();<br>      <span class="hljs-keyword">for</span> (; Idx != E; ++Idx) {<br><br>        <span class="hljs-keyword">if</span> (PN-&gt;<span class="hljs-built_in">getIncomingBlock</span>(Idx) == OrigBlock) {<br><br>          PN-&gt;<span class="hljs-built_in">setIncomingBlock</span>(Idx, NewDefault);<br>          <span class="hljs-keyword">break</span>;<br><br>        }<br><br>      }<br><br>    }<br><br>  }<br></code></pre></td></tr></tbody></table></figure>
+</li>
+<li><p><code>switchConvert()</code>：</p>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-function">BasicBlock *<span class="hljs-title">SplitSwitchesTransform::switchConvert</span><span class="hljs-params">(</span></span><br><span class="hljs-params"><span class="hljs-function">    CaseVector Cases, std::vector&lt;<span class="hljs-type">bool</span>&gt; bytesChecked, BasicBlock *OrigBlock,</span></span><br><span class="hljs-params"><span class="hljs-function">    BasicBlock *NewDefault, Value *Val, <span class="hljs-type">unsigned</span> level)</span> </span>{<br><br>  <span class="hljs-type">unsigned</span>     ValTypeBitWidth = Cases[<span class="hljs-number">0</span>].Val-&gt;<span class="hljs-built_in">getBitWidth</span>();<br>  IntegerType *ValType =<br>      IntegerType::<span class="hljs-built_in">get</span>(OrigBlock-&gt;<span class="hljs-built_in">getContext</span>(), ValTypeBitWidth);<br>  IntegerType *        ByteType = IntegerType::<span class="hljs-built_in">get</span>(OrigBlock-&gt;<span class="hljs-built_in">getContext</span>(), <span class="hljs-number">8</span>);<br>  <span class="hljs-type">unsigned</span>             BytesInValue = bytesChecked.<span class="hljs-built_in">size</span>();<br>  std::vector&lt;<span class="hljs-type">uint8_t</span>&gt; setSizes;<br>  std::vector&lt;std::set&lt;<span class="hljs-type">uint8_t</span>&gt; &gt; <span class="hljs-built_in">byteSets</span>(BytesInValue, std::<span class="hljs-built_in">set</span>&lt;<span class="hljs-type">uint8_t</span>&gt;());<br><br>  <span class="hljs-comment">/* for each of the possible cases we iterate over all bytes of the values</span><br><span class="hljs-comment">   * build a set of possible values at each byte position in byteSets */</span><br>  <span class="hljs-keyword">for</span> (CaseExpr &amp;Case : Cases) {<br><br>    <span class="hljs-keyword">for</span> (<span class="hljs-type">unsigned</span> i = <span class="hljs-number">0</span>; i &lt; BytesInValue; i++) {<br><br>      <span class="hljs-type">uint8_t</span> byte = (Case.Val-&gt;<span class="hljs-built_in">getZExtValue</span>() &gt;&gt; (i * <span class="hljs-number">8</span>)) &amp; <span class="hljs-number">0xFF</span>;    <span class="hljs-comment">// 获取Case值的每一个字节，存放于byteSets中</span><br>      byteSets[i].<span class="hljs-built_in">insert</span>(byte);<br><br>    }<br><br>  }<br><br>  <span class="hljs-comment">/* find the index of the first byte position that was not yet checked. then</span><br><span class="hljs-comment">   * save the number of possible values at that byte position */</span><br>  <span class="hljs-type">unsigned</span> smallestIndex = <span class="hljs-number">0</span>;<br>  <span class="hljs-type">unsigned</span> smallestSize = <span class="hljs-number">257</span>;<br>  <span class="hljs-keyword">for</span> (<span class="hljs-type">unsigned</span> i = <span class="hljs-number">0</span>; i &lt; byteSets.<span class="hljs-built_in">size</span>(); i++) {  <span class="hljs-comment">// 这里的代码主要用于递归！！！</span><br><br>    <span class="hljs-keyword">if</span> (bytesChecked[i]) <span class="hljs-keyword">continue</span>;<br>    <span class="hljs-keyword">if</span> (byteSets[i].<span class="hljs-built_in">size</span>() &lt; smallestSize) {<br><br>      smallestIndex = i;<br>      smallestSize = byteSets[i].<span class="hljs-built_in">size</span>();<br><br>    }<br><br>  }<br><br>  <span class="hljs-built_in">assert</span>(bytesChecked[smallestIndex] == <span class="hljs-literal">false</span>);<br><br>  <span class="hljs-comment">/* there are only smallestSize different bytes at index smallestIndex */</span><br><br>  Instruction *Shift, *Trunc;<br>  Function *   F = OrigBlock-&gt;<span class="hljs-built_in">getParent</span>();<br>  BasicBlock * NewNode = BasicBlock::<span class="hljs-built_in">Create</span>(Val-&gt;<span class="hljs-built_in">getContext</span>(), <span class="hljs-string">"NodeBlock"</span>, F);<br>  Shift = BinaryOperator::<span class="hljs-built_in">Create</span>(Instruction::LShr, Val,<br>                                 ConstantInt::<span class="hljs-built_in">get</span>(ValType, smallestIndex * <span class="hljs-number">8</span>));  <span class="hljs-comment">// condition逻辑右移</span><br>  NewNode-&gt;<span class="hljs-built_in">getInstList</span>().<span class="hljs-built_in">push_back</span>(Shift);<br><br>  <span class="hljs-keyword">if</span> (ValTypeBitWidth &gt; <span class="hljs-number">8</span>) {<br><br>    Trunc = <span class="hljs-keyword">new</span> <span class="hljs-built_in">TruncInst</span>(Shift, ByteType);  <span class="hljs-comment">// 截断</span><br>    NewNode-&gt;<span class="hljs-built_in">getInstList</span>().<span class="hljs-built_in">push_back</span>(Trunc);<br><br>  } <span class="hljs-keyword">else</span> {<br><br>    <span class="hljs-comment">/* not necessary to trunc */</span><br>    Trunc = Shift;<br><br>  }<br><br>  <span class="hljs-comment">/* this is a trivial case, we can directly check for the byte,</span><br><span class="hljs-comment">   * if the byte is not found go to default. if the byte was found</span><br><span class="hljs-comment">   * mark the byte as checked. if this was the last byte to check</span><br><span class="hljs-comment">   * we can finally execute the block belonging to this case */</span><br><br>  <span class="hljs-keyword">if</span> (smallestSize == <span class="hljs-number">1</span>) {<br><br>    <span class="hljs-type">uint8_t</span> byte = *(byteSets[smallestIndex].<span class="hljs-built_in">begin</span>());<br><br>    <span class="hljs-comment">/* insert instructions to check whether the value we are switching on is</span><br><span class="hljs-comment">     * equal to byte */</span><br>    ICmpInst *Comp =<br>        <span class="hljs-keyword">new</span> <span class="hljs-built_in">ICmpInst</span>(ICmpInst::ICMP_EQ, Trunc, ConstantInt::<span class="hljs-built_in">get</span>(ByteType, byte),<br>                     <span class="hljs-string">"byteMatch"</span>);<br>    NewNode-&gt;<span class="hljs-built_in">getInstList</span>().<span class="hljs-built_in">push_back</span>(Comp);<br><br>    bytesChecked[smallestIndex] = <span class="hljs-literal">true</span>;<br>    <span class="hljs-type">bool</span> allBytesAreChecked = <span class="hljs-literal">true</span>;<br><br>    <span class="hljs-keyword">for</span> (std::vector&lt;<span class="hljs-type">bool</span>&gt;::iterator BCI = bytesChecked.<span class="hljs-built_in">begin</span>(),<br>                                     E = bytesChecked.<span class="hljs-built_in">end</span>();<br>         BCI != E; ++BCI) {<br><br>      <span class="hljs-keyword">if</span> (!*BCI) {<br><br>        allBytesAreChecked = <span class="hljs-literal">false</span>;<br>        <span class="hljs-keyword">break</span>;<br><br>      }<br><br>    }<br><br>    <span class="hljs-comment">//    if (std::all_of(bytesChecked.begin(), bytesChecked.end(),</span><br>    <span class="hljs-comment">//                    [](bool b) { return b; })) {</span><br><br>    <span class="hljs-keyword">if</span> (allBytesAreChecked) {<br><br>      <span class="hljs-built_in">assert</span>(Cases.<span class="hljs-built_in">size</span>() == <span class="hljs-number">1</span>);<br>      BranchInst::<span class="hljs-built_in">Create</span>(Cases[<span class="hljs-number">0</span>].BB, NewDefault, Comp, NewNode);<br><br>      <span class="hljs-comment">/* we have to update the phi nodes! */</span><br>      <span class="hljs-keyword">for</span> (BasicBlock::iterator I = Cases[<span class="hljs-number">0</span>].BB-&gt;<span class="hljs-built_in">begin</span>();<br>           I != Cases[<span class="hljs-number">0</span>].BB-&gt;<span class="hljs-built_in">end</span>(); ++I) {<br><br>        <span class="hljs-keyword">if</span> (!<span class="hljs-built_in">isa</span>&lt;PHINode&gt;(&amp;*I)) { <span class="hljs-keyword">continue</span>; }<br>        PHINode *PN = <span class="hljs-built_in">cast</span>&lt;PHINode&gt;(I);<br><br>        <span class="hljs-comment">/* Only update the first occurrence. */</span><br>        <span class="hljs-type">unsigned</span> Idx = <span class="hljs-number">0</span>, E = PN-&gt;<span class="hljs-built_in">getNumIncomingValues</span>();<br>        <span class="hljs-keyword">for</span> (; Idx != E; ++Idx) {<br><br>          <span class="hljs-keyword">if</span> (PN-&gt;<span class="hljs-built_in">getIncomingBlock</span>(Idx) == OrigBlock) {<br><br>            PN-&gt;<span class="hljs-built_in">setIncomingBlock</span>(Idx, NewNode);<br>            <span class="hljs-keyword">break</span>;<br><br>          }<br><br>        }<br><br>      }<br><br>    } <span class="hljs-keyword">else</span> {<br><br>      BasicBlock *BB = switchConvert(Cases, bytesChecked, OrigBlock, NewDefault,<br>                                     Val, level + <span class="hljs-number">1</span>);<br>      BranchInst::<span class="hljs-built_in">Create</span>(BB, NewDefault, Comp, NewNode);<br><br>    }<br><br>  }<br><br>  <span class="hljs-comment">/* there is no byte which we can directly check on, split the tree */</span><br>  <span class="hljs-keyword">else</span> {<br>	<span class="hljs-comment">// 二分法 分而治之！</span><br>    std::vector&lt;<span class="hljs-type">uint8_t</span>&gt; byteVector;<br>    std::<span class="hljs-built_in">copy</span>(byteSets[smallestIndex].<span class="hljs-built_in">begin</span>(), byteSets[smallestIndex].<span class="hljs-built_in">end</span>(),<br>              std::<span class="hljs-built_in">back_inserter</span>(byteVector));<br>    std::<span class="hljs-built_in">sort</span>(byteVector.<span class="hljs-built_in">begin</span>(), byteVector.<span class="hljs-built_in">end</span>());<br>    <span class="hljs-type">uint8_t</span> pivot = byteVector[byteVector.<span class="hljs-built_in">size</span>() / <span class="hljs-number">2</span>];<br><br>    <span class="hljs-comment">/* we already chose to divide the cases based on the value of byte at index</span><br><span class="hljs-comment">     * smallestIndex the pivot value determines the threshold for the decicion;</span><br><span class="hljs-comment">     * if a case value</span><br><span class="hljs-comment">     * is smaller at this byte index move it to the LHS vector, otherwise to the</span><br><span class="hljs-comment">     * RHS vector */</span><br><br>    CaseVector LHSCases, RHSCases;<br><br>    <span class="hljs-keyword">for</span> (CaseExpr &amp;Case : Cases) {<br><br>      <span class="hljs-type">uint8_t</span> byte = (Case.Val-&gt;<span class="hljs-built_in">getZExtValue</span>() &gt;&gt; (smallestIndex * <span class="hljs-number">8</span>)) &amp; <span class="hljs-number">0xFF</span>;<br><br>      <span class="hljs-keyword">if</span> (byte &lt; pivot) {<br><br>        LHSCases.<span class="hljs-built_in">push_back</span>(Case);<br><br>      } <span class="hljs-keyword">else</span> {<br><br>        RHSCases.<span class="hljs-built_in">push_back</span>(Case);<br><br>      }<br><br>    }<br><br>    BasicBlock *LBB, *RBB;<br>    LBB = switchConvert(LHSCases, bytesChecked, OrigBlock, NewDefault, Val,<br>                        level + <span class="hljs-number">1</span>);<br>    RBB = switchConvert(RHSCases, bytesChecked, OrigBlock, NewDefault, Val,<br>                        level + <span class="hljs-number">1</span>);<br><br>    <span class="hljs-comment">/* insert instructions to check whether the value we are switching on is</span><br><span class="hljs-comment">     * equal to byte */</span><br>    ICmpInst *Comp =<br>        <span class="hljs-keyword">new</span> <span class="hljs-built_in">ICmpInst</span>(ICmpInst::ICMP_ULT, Trunc,<br>                     ConstantInt::<span class="hljs-built_in">get</span>(ByteType, pivot), <span class="hljs-string">"byteMatch"</span>);<br>    NewNode-&gt;<span class="hljs-built_in">getInstList</span>().<span class="hljs-built_in">push_back</span>(Comp);<br>    BranchInst::<span class="hljs-built_in">Create</span>(LBB, RBB, Comp, NewNode);<br><br>  }<br><br>  <span class="hljs-keyword">return</span> NewNode;<br><br>}<br><br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>简单来说，其功能就是将switch分支细粒度化，比如：</li>
+</ul>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-comment">// before spliting switches...</span><br>{<br>    <span class="hljs-type">long</span> <span class="hljs-type">long</span> x;<br>    <span class="hljs-keyword">switch</span>(x){<br>        <span class="hljs-keyword">case</span> <span class="hljs-number">0x12345678</span>:<br>            <span class="hljs-built_in">do_something1</span>();<br>        <span class="hljs-keyword">case</span> <span class="hljs-number">0x78563412</span>:<br>            <span class="hljs-built_in">do_something2</span>();<br>    }<br>    <br>}<br><span class="hljs-comment">// after spliting switches...</span><br>{<br>    <span class="hljs-keyword">if</span>((u8*)x[<span class="hljs-number">0</span>] == <span class="hljs-number">0x78</span>)<br>        <span class="hljs-keyword">if</span>((u8*)x[<span class="hljs-number">1</span>] == <span class="hljs-number">0x56</span>))<br>            <span class="hljs-keyword">if</span>((u8*)x[<span class="hljs-number">2</span>] == <span class="hljs-number">0x34</span>))<br>                <span class="hljs-keyword">if</span>((u8*)x[<span class="hljs-number">3</span>] == <span class="hljs-number">0x12</span>))<br>                    <span class="hljs-built_in">do_something1</span>();<br>    <span class="hljs-keyword">if</span>((u8*)x[<span class="hljs-number">0</span>] == <span class="hljs-number">0x12</span>)<br>        <span class="hljs-keyword">if</span>((u8*)x[<span class="hljs-number">1</span>] == <span class="hljs-number">0x34</span>))<br>            <span class="hljs-keyword">if</span>((u8*)x[<span class="hljs-number">2</span>] == <span class="hljs-number">0x56</span>))<br>                <span class="hljs-keyword">if</span>((u8*)x[<span class="hljs-number">3</span>] == <span class="hljs-number">0x78</span>))<br>                    <span class="hljs-built_in">do_something2</span>();<br>}<br></code></pre></td></tr></tbody></table></figure></li>
+</ul>
+<h3 id="afl-complier-rt-o-c"><a href="#afl-complier-rt-o-c" class="headerlink" title="afl-complier-rt.o.c"></a>afl-complier-rt.o.c</h3><ul>
+<li>以 <code>__cmplog_ins_hook1</code> 为例：</li>
+</ul>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-type">void</span> __cmplog_ins_hook1(<span class="hljs-type">uint8_t</span> arg1, <span class="hljs-type">uint8_t</span> arg2, <span class="hljs-type">uint8_t</span> attr) {<br><br>  <span class="hljs-comment">// fprintf(stderr, "hook1 arg0=%02x arg1=%02x attr=%u\n",</span><br>  <span class="hljs-comment">//         (u8) arg1, (u8) arg2, attr);</span><br><br>  <span class="hljs-keyword">if</span> (<span class="hljs-built_in">unlikely</span>(!__afl_cmp_map || arg1 == arg2)) <span class="hljs-keyword">return</span>;  <span class="hljs-comment">// Oops? got it!</span><br><br>  <span class="hljs-type">uintptr_t</span> k = (<span class="hljs-type">uintptr_t</span>)__builtin_return_address(<span class="hljs-number">0</span>); <span class="hljs-comment">// __builtin_return_address()返回调用函数的返回地址，0表示当前函数的返回地址，1表示当前函数的调用者的返回地址，以此类推，k为当前函数的返回地址。目的是啥？</span><br>  k = (<span class="hljs-type">uintptr_t</span>)(<span class="hljs-built_in">default_hash</span>((u8 *)&amp;k, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">uintptr_t</span>)) &amp; (CMP_MAP_W - <span class="hljs-number">1</span>));  <span class="hljs-comment">//指针（返回地址）进行哈希映射，然后与上CMP_MAP大小：65536</span><br><br>  u32 hits;<br><br>  <span class="hljs-keyword">if</span> (__afl_cmp_map-&gt;headers[k].type != CMP_TYPE_INS) {  <span class="hljs-comment">// 首先命中？</span><br><br>    __afl_cmp_map-&gt;headers[k].type = CMP_TYPE_INS;       <span class="hljs-comment">// type赋值</span><br>    hits = <span class="hljs-number">0</span>;											 <span class="hljs-comment">// 初始化hits值</span><br>    __afl_cmp_map-&gt;headers[k].hits = <span class="hljs-number">1</span>;					 <span class="hljs-comment">// 命中值hits初始化为1</span><br>    __afl_cmp_map-&gt;headers[k].shape = <span class="hljs-number">0</span>;				 <span class="hljs-comment">// ？</span><br><br>  } <span class="hljs-keyword">else</span> {<br><br>    hits = __afl_cmp_map-&gt;headers[k].hits++;			  <span class="hljs-comment">// 命中值hits++，将原来命中值赋值给局部变量hits</span><br><br>  }<br><br>  __afl_cmp_map-&gt;headers[k].attribute = attr;			  <span class="hljs-comment">// attribute？貌似是1？</span><br><br>  hits &amp;= CMP_MAP_H - <span class="hljs-number">1</span>;								  <span class="hljs-comment">// 记录前 CMP_MAP_H（32）次的值，超过 CMP_MAP_H 会替换前面的值</span><br>  __afl_cmp_map-&gt;log[k][hits].v0 = arg1;<br>  __afl_cmp_map-&gt;log[k][hits].v1 = arg2;<br><br>}<br></code></pre></td></tr></tbody></table></figure>
+
+
+
+<h2 id="2-Redqueen"><a href="#2-Redqueen" class="headerlink" title="2. Redqueen"></a>2. Redqueen</h2><h3 id="afl-fuzz-redqueen-c"><a href="#afl-fuzz-redqueen-c" class="headerlink" title="afl-fuzz-redqueen.c"></a>afl-fuzz-redqueen.c</h3><ul>
+<li><p><code>colorization()</code> 填色函数 ==&gt; 生成污点信息</p>
+<ul>
+<li>通过<code>type_replace()</code>函数对输入的每一个字节进行同类型的替换，e.g. 该字节为大写字母，那么就将其替换为其他大写字母</li>
+<li><code>pop_biggest_range()</code>得到ranges [双向链表，用来存储当前输入的切割范围] 最大的范围，判断对当前范围的字节改变是否会影响到路径的变化</li>
+<li>最终得到的ranges链表中的每一个范围表示对该范围进行变异大概率能够引起覆盖率变化，由此生成taint信息</li>
+</ul>
+</li>
+<li><p><code>colorization()</code>后得到一个污点后的输入buf和原始输入orig_buf，然后分别运行这两个测试用例，将cmp覆盖率信息保存以进行后续分析：</p>
+<ul>
+<li><strong>input-to-state</strong>阶段：调用<code>cmp_fuzz()</code>  TODO!</li>
+</ul>
+</li>
+</ul>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E6%A8%A1%E7%B3%8A%E6%B5%8B%E8%AF%95/">#模糊测试</a>
+      
+        <a href="/tags/AFL/">#AFL++</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>AFLplusplus cmplog插桩解析</div>
+      <div>http://example.com/2023/04/20/AFLplusplus-cmplog插桩解析/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>bladchan</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年4月20日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/03/09/AFLplusplus%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%98%E5%BC%82%E5%99%A8%E2%80%94%E6%BA%90%E7%A0%81%E7%BB%86%E8%8A%82/" title="AFLplusplus自定义变异器—源码细节">
+                        <span class="hidden-mobile">AFLplusplus自定义变异器—源码细节</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Chan</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Powered by Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

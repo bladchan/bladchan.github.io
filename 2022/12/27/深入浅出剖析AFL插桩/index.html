@@ -1,0 +1,1548 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="bladchan">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="AFL插桩剖析I. 前置知识 编译器产生可执行文件的流程如下图1、2所示（以gcc编译器为例，clang同理）：   图1 gcc编译器工作流程（顶层架构）   图2 clang编译器工作流程（顶层架构）   主流的编译器【图1中第二个阶段】包括三个组件：前端、中间端和后端 [1] 前端：读取源文件并对其进行分析，通常是将源码转化为标准抽象语法树（AST） 中间端：进行源码优化，通常是使用生成的某">
+<meta property="og:type" content="article">
+<meta property="og:title" content="深入浅出AFL插桩">
+<meta property="og:url" content="http://example.com/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/index.html">
+<meta property="og:site_name" content="chan&#39;s blog">
+<meta property="og:description" content="AFL插桩剖析I. 前置知识 编译器产生可执行文件的流程如下图1、2所示（以gcc编译器为例，clang同理）：   图1 gcc编译器工作流程（顶层架构）   图2 clang编译器工作流程（顶层架构）   主流的编译器【图1中第二个阶段】包括三个组件：前端、中间端和后端 [1] 前端：读取源文件并对其进行分析，通常是将源码转化为标准抽象语法树（AST） 中间端：进行源码优化，通常是使用生成的某">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/1.png">
+<meta property="og:image" content="http://example.com/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/2.png">
+<meta property="og:image" content="http://example.com/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/4.png">
+<meta property="og:image" content="http://example.com/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/5.png">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/27a1.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f914.png?v8">
+<meta property="og:image" content="http://example.com/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/3.png">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/270b.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/26a0.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f330.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/270b.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/26a0.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f330.png?v8">
+<meta property="og:image" content="http://example.com/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/6.png">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
+<meta property="og:image" content="http://example.com/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/7.png">
+<meta property="og:image" content="http://example.com/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/8.png">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
+<meta property="og:image" content="http://example.com/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/9.png">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
+<meta property="og:image" content="http://example.com/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/10.png">
+<meta property="og:image" content="http://example.com/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/11.png">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/27a1.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/27a1.png?v8">
+<meta property="og:image" content="http://example.com/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/12.png">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f4d3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f4ad.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/270b.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/26a0.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/2714.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/274c.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/2753.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f914.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0033-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f914.png?v8">
+<meta property="og:image" content="http://example.com/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/13.png">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f914.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
+<meta property="og:image" content="http://example.com/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/14.png">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0033-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0034-20e3.png?v8">
+<meta property="article:published_time" content="2022-12-27T09:55:00.000Z">
+<meta property="article:modified_time" content="2023-05-01T09:00:42.174Z">
+<meta property="article:author" content="bladchan">
+<meta property="article:tag" content="模糊测试">
+<meta property="article:tag" content="AFL">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://example.com/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/1.png">
+  
+  
+  
+  <title>深入浅出AFL插桩 - chan&#39;s blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.4","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.3.0">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+</head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Chan&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/">
+                <i class="iconfont icon-link-fill"></i>
+                <span>友链</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="深入浅出AFL插桩"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-12-27 17:55" pubdate>
+          2022年12月27日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          31k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          260 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">深入浅出AFL插桩</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="AFL插桩剖析"><a href="#AFL插桩剖析" class="headerlink" title="AFL插桩剖析"></a>AFL插桩剖析</h1><h2 id="I-前置知识"><a href="#I-前置知识" class="headerlink" title="I. 前置知识"></a>I. 前置知识</h2><ul>
+<li>编译器产生可执行文件的流程如下图1、2所示（以gcc编译器为例，clang同理）：</li>
+</ul>
+<p><img src="/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/1.png" srcset="/img/loading.gif" lazyload></p>
+<center>图1 gcc编译器工作流程（顶层架构）</center>
+
+<p><img src="/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/2.png" srcset="/img/loading.gif" lazyload></p>
+<center>图2 clang编译器工作流程（顶层架构）</center>
+
+<ul>
+<li>主流的编译器【图1中第二个阶段】包括三个组件：<strong>前端</strong>、<strong>中间端</strong>和<strong>后端</strong> [1]<ul>
+<li>前端：读取源文件并对其进行分析，通常是将源码转化为标准抽象语法树（AST）</li>
+<li>中间端：进行源码优化，通常是使用生成的某种中间表示【GCC中是GIMPLE/RTL；Clang中是IR】，并根据该中间表示进行优化</li>
+<li>后端：使用优化后的中间表示来生成对应目标架构的汇编代码</li>
+</ul>
+</li>
+</ul>
+<h3 id="1-GCC"><a href="#1-GCC" class="headerlink" title="1. GCC"></a>1. GCC</h3><ul>
+<li>GCC 4.1架构图：</li>
+</ul>
+<p><img src="/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/4.png" srcset="/img/loading.gif" lazyload></p>
+<center>图3 GCC 4.1架构图</center>
+
+<h4 id="四个阶段"><a href="#四个阶段" class="headerlink" title="四个阶段"></a>四个阶段</h4><p><img src="/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/5.png" srcset="/img/loading.gif" lazyload></p>
+<center>图4 编译器在编译链接时的具体流程[8]</center>
+
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ gcc -E afl_inst_test.c <span class="hljs-comment"># 预处理</span><br>$ gcc -S afl_inst_test.c <span class="hljs-comment"># 编译</span><br>$ gcc -c afl_inst_test.c <span class="hljs-comment"># 汇编 =&gt; 目标文件 or as afl_inst_test.s -o afl_inst_test.o</span><br>$ ld -plugin /usr/lib/gcc/x86_64-linux-gnu/7/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/7/lto-wrapper -plugin-opt=-fresolution=/tmp/cclTw8TB.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -z now -z relro /usr/lib/gcc/x86_64-linux-gnu/7/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/7/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/7/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/7 -L/usr/lib/gcc/x86_64-linux-gnu/7/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/7/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/7/../../.. ./afl_inst_test.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /usr/lib/gcc/x86_64-linux-gnu/7/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/7/../../../x86_64-linux-gnu/crtn.o -o afl_inst_test <span class="hljs-comment"># 链接！[10]</span><br>$ afl_inst_test<br>This is a <span class="hljs-built_in">test</span>!<br>Please give me an input number:-1<br>-1 is a negative number~<br></code></pre></td></tr></tbody></table></figure>
+
+<h4 id="前端分析"><a href="#前端分析" class="headerlink" title="前端分析"></a>前端分析</h4><ul>
+<li><p>对源代码进行<strong>预处理</strong>、<strong>语法分析</strong>、<strong>语义分析</strong>，同时会生成抽象语法树<strong>AST</strong></p>
+</li>
+<li><p>parse the source code  <span class="github-emoji"><span>➡</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/27a1.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span>  即将源代码转化为有意义的数据（有意义是针对机器来说的），表示我们可读的源代码究竟想要表达啥</p>
+</li>
+</ul>
+<hr>
+<p><span class="github-emoji"><span>🤔</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f914.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <strong>GCC本身无法输出生成的AST [2]，这里我们展示GCC编译过程中生成的CFG [3]</strong> ：</p>
+<ol start="0">
+<li>源代码：</li>
+</ol>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">// afl_inst_test.c</span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;stdio.h&gt;</span></span><br><br><span class="hljs-type">int</span> <span class="hljs-title function_">fun</span><span class="hljs-params">(<span class="hljs-type">int</span> a)</span>{<br>	<span class="hljs-keyword">if</span>(a &gt; <span class="hljs-number">0</span>){<br>		<span class="hljs-keyword">return</span> -a;<br>	}<br>	<span class="hljs-keyword">return</span> a;<br>}<br><span class="hljs-type">int</span> <span class="hljs-title function_">main</span><span class="hljs-params">(<span class="hljs-type">int</span> argc, <span class="hljs-type">char</span>** argv)</span>{<br>	<span class="hljs-type">int</span> a;<br>    <span class="hljs-built_in">printf</span>(<span class="hljs-string">"This is a test!\nPlease give me an input number:"</span>);<br>	<span class="hljs-built_in">scanf</span>(<span class="hljs-string">"%d"</span>, &amp;a);<br>	<span class="hljs-comment">/* simulating branches */</span><br>	<span class="hljs-keyword">if</span>(a &gt; <span class="hljs-number">0</span>){<br>		<span class="hljs-built_in">printf</span>(<span class="hljs-string">"%d is a positive number~"</span>, a);	<br>	}<span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(a &lt; <span class="hljs-number">0</span>){<br>		<span class="hljs-built_in">printf</span>(<span class="hljs-string">"%d is a negative number~"</span>, a);	<br>	}<span class="hljs-keyword">else</span> {<br>		<span class="hljs-built_in">printf</span>(<span class="hljs-string">"zero detected!"</span>);<br>	}<br>	<span class="hljs-comment">/* simulating a function call */</span><br>	fun(a);<br>	<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<ol>
+<li>产生AST对应的<code>.dot</code>文件：</li>
+</ol>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ gcc afl_inst_test.c -fdump-tree-all-graph<br>$ <span class="hljs-built_in">ls</span><br>afl_inst_test.c<br>afl_inst_test.c.001t.tu<br>afl_inst_test.c.002t.class<br>afl_inst_test.c.003t.original<br>...<br>afl_inst_test.c.227t.optimized<br>afl_inst_test.c.227t.optimized.dot<br>afl_inst_test.c.311t.statistics<br>a.out<br></code></pre></td></tr></tbody></table></figure>
+
+<ol start="2">
+<li>使用<code>dot</code>程序将main函数对应<code>.dot</code>转化为可视图：</li>
+</ol>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ dot -Tpng afl_inst_test.c.011t.cfg.dot -o main.png<br></code></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/3.png" srcset="/img/loading.gif" lazyload></p>
+<center>图5 示例CFG</center>
+
+<h4 id="中间端优化"><a href="#中间端优化" class="headerlink" title="中间端优化"></a>中间端优化</h4><ul>
+<li>GCC中间端包括两个部分：<strong>GIMPLE</strong> 和 <strong>RTL</strong></li>
+</ul>
+<hr>
+<p><strong>GIMPLE：</strong></p>
+<ul>
+<li><p>派生自GCC <strong>GENERIC</strong>（也是一种中间表示；最初，不同的GCC前端会生成依赖于架构的树表示，而GENERIC是作为与平台无关的树表示而引入的，以简化前端开发过程。<strong>GENERIC</strong>的目标是生成<strong>GIMPLE</strong> [5]）</p>
+</li>
+<li><p>three-address表示：</p>
+<ul>
+<li>将<strong>GENERIC</strong>表达式拆成不超过3个操作数的元组（除了函数调用）</li>
+</ul>
+</li>
+<li><p>引入<strong>暂存器</strong>来保存计算复杂表达式所需的中间值，GENERIC中使用的控制结构降级为<strong>条件跳转</strong>，词法<strong>作用域被移除</strong>，而异常区域则被转换为边上的异常区域树</p>
+</li>
+<li><p>使用一个”gimplifier”将<strong>GENERIC</strong>转化为<strong>GIMPLE</strong></p>
+</li>
+<li><p>包括”<strong>High GIMPLE</strong>“和”<strong>Low GIMPLE</strong>“</p>
+<ul>
+<li>High GIMPLE包含一些容器语句，如词法范围和嵌套表达式，派生自<strong>前端AST树</strong>或<strong>GENERIC</strong>，然后基于High GIMPLE生成Low GIMPLE</li>
+<li>Low GIMPLE则显示所有控制和异常表达式的隐含跳转</li>
+</ul>
+</li>
+<li><p>C和C++前端直接从前端AST树转化为<strong>GIMPLE</strong>，而不是转化为<strong>GENERIC</strong></p>
+</li>
+<li><p>使用标志<code>-fdump-tree-gimple</code>来生成类C的表示</p>
+</li>
+</ul>
+<p><span class="github-emoji"><span>✋</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/270b.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 说白了，<strong>GIMPLE</strong>就是干了两件事：</p>
+<p>​	<span class="github-emoji"><span>1⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 删除高级结构，如for，while循环【用goto和跳转替换】</p>
+<p>​	<span class="github-emoji"><span>2⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 简化表达式（通过引入临时变量）</p>
+<p><span class="github-emoji"><span>⚠</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/26a0.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 可以在Low GIMPLE实现GIMPLE层级的Pass！</p>
+<p><span class="github-emoji"><span>🌰</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f330.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <code> if (a || b) stmt;</code>  ==&gt;</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs C"><span class="hljs-keyword">if</span> (a) <span class="hljs-keyword">goto</span> L1;<br><span class="hljs-keyword">if</span> (b) <span class="hljs-keyword">goto</span> L1; <span class="hljs-keyword">else</span> <span class="hljs-keyword">goto</span> L2;<br>L1:<br>stmt;<br>L2:<br></code></pre></td></tr></tbody></table></figure>
+
+<hr>
+<p><strong>GCC生成GIMPLE</strong>：</p>
+<p>Low GIMPLE:</p>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ gcc afl_inst_test.c -fdump-tree-gimple<br>$ <span class="hljs-built_in">cat</span> afl_inst_test.c.004t.gimple <br>fun (int a)<br>{<br>  int D.2258;<br><br>  <span class="hljs-keyword">if</span> (a &gt; 0) goto &lt;D.2256&gt;; <span class="hljs-keyword">else</span> goto &lt;D.2257&gt;;<br>  &lt;D.2256&gt;:<br>  D.2258 = -a;<br>  <span class="hljs-built_in">return</span> D.2258;<br>  &lt;D.2257&gt;:<br>  D.2258 = a;<br>  <span class="hljs-built_in">return</span> D.2258;<br>}<br>...<br></code></pre></td></tr></tbody></table></figure>
+
+<p>High GIMPLE:</p>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ gcc afl_inst_test.c -fdump-tree-gimple-raw<br>$ <span class="hljs-built_in">cat</span> afl_inst_test.c.004t.gimple<br>fun (int a)<br>gimple_bind &lt;<br>  int D.2258;<br><br>  gimple_cond &lt;gt_expr, a, 0, &lt;D.2256&gt;, &lt;D.2257&gt;&gt;<br>  gimple_label &lt;&lt;<span class="hljs-string">D.2256&gt;&gt;</span><br><span class="hljs-string">  gimple_assign &lt;negate_expr, D</span>.2258, a, NULL, NULL&gt;<br>  gimple_return &lt;D.2258 NULL&gt;<br>  gimple_label &lt;&lt;<span class="hljs-string">D.2257&gt;&gt;</span><br><span class="hljs-string">  gimple_assign &lt;parm_decl, D</span>.2258, a, NULL, NULL&gt;<br>  gimple_return &lt;D.2258 NULL&gt;<br>&gt;<br>...<br></code></pre></td></tr></tbody></table></figure>
+
+<hr>
+<p><strong>RTL:</strong></p>
+<ul>
+<li>寄存器转换语言 <em>Register Transfer Language</em>，与汇编语言很接近</li>
+<li>表示一个具有无限数量寄存器的抽象机器，结构类似于Lisp和C语言的混合</li>
+<li>在生成<strong>RTL</strong>代码后，GCC编译器在将其转换到汇编语言之前进行了不同的<strong>底层优化</strong> [7]</li>
+<li>由于<strong>RTL</strong>表示的生成和优化的程序在编译过程的后端，这意味着它依赖于硬件，而不包含程序的所有信息</li>
+</ul>
+<p><span class="github-emoji"><span>✋</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/270b.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 说白了，<strong>RTL</strong>就是干了两件事：</p>
+<p><span class="github-emoji"><span>1⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 将<strong>GIMPLE</strong>转化为与硬件相关的RTL语言</p>
+<p><span class="github-emoji"><span>2⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 在RTL基础上进行<strong>底层优化</strong></p>
+<p><span class="github-emoji"><span>⚠</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/26a0.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 同样的，我们也可以实现基于RTL层级的Pass！</p>
+<p><span class="github-emoji"><span>🌰</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f330.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <code>b = a - 1</code>  ==&gt;</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs assembly">(set (reg/v:SI 59 [ b ])<br>     (plus:SI (reg/v:SI 60 [ a ]<br>              (const_int -1 [0xffffffff]))))<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>RTL中的一些优化Passes：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>RTL generation</td>
+</tr>
+<tr>
+<td>Loop optimization</td>
+</tr>
+<tr>
+<td>Jump bypassing</td>
+</tr>
+<tr>
+<td>If conversion</td>
+</tr>
+<tr>
+<td>Instruction combination</td>
+</tr>
+<tr>
+<td>Register movement</td>
+</tr>
+<tr>
+<td>Instruction scheduling</td>
+</tr>
+<tr>
+<td>Register allocation</td>
+</tr>
+<tr>
+<td>Final</td>
+</tr>
+</tbody></table>
+<hr>
+<p><strong>GCC生成RTL：</strong></p>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ gcc afl_inst_test.c -fdump-rtl-all<br>$ <span class="hljs-built_in">cat</span> afl_inst_test.c.310r.dfinish <br><br>;; Function fun (fun, funcdef_no=0, decl_uid=2248, cgraph_uid=0, symbol_order=0)<br><br>(note 1 0 4 NOTE_INSN_DELETED)<br>(note 4 1 28 2 [bb 2] NOTE_INSN_BASIC_BLOCK)<br>(insn/f 28 4 29 2 (<span class="hljs-built_in">set</span> (mem:DI (pre_dec:DI (reg/f:DI 7 sp)) [0  S8 A8])<br>        (reg/f:DI 6 bp)) <span class="hljs-string">"afl_inst_test.c"</span>:3 57 {*pushdi2_rex64}<br>     (nil))<br>(insn/f 29 28 30 2 (<span class="hljs-built_in">set</span> (reg/f:DI 6 bp)<br>        (reg/f:DI 7 sp)) <span class="hljs-string">"afl_inst_test.c"</span>:3 81 {*movdi_internal}<br>     (nil))<br>...<br></code></pre></td></tr></tbody></table></figure>
+
+<h4 id="后端生成"><a href="#后端生成" class="headerlink" title="后端生成"></a>后端生成</h4><ul>
+<li>后端为指定的目标平台生成汇编代码</li>
+</ul>
+<p>GCC生成目标平台汇编代码：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ gcc -S afl_inst_test.c<br>$ <span class="hljs-built_in">cat</span> afl_inst_test.s<br></code></pre></td></tr></tbody></table></figure>
+
+<h3 id="2-Clang"><a href="#2-Clang" class="headerlink" title="2. Clang"></a>2. Clang</h3><h4 id="四个阶段-1"><a href="#四个阶段-1" class="headerlink" title="四个阶段"></a>四个阶段</h4><ul>
+<li>与GCC类似，不再赘述</li>
+</ul>
+<h4 id="前端分析-1"><a href="#前端分析-1" class="headerlink" title="前端分析"></a>前端分析</h4><ul>
+<li>Clang<strong>前端管线</strong>：</li>
+</ul>
+<p><img src="/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/6.png" srcset="/img/loading.gif" lazyload></p>
+<center>图6 Clang前端流水线</center>
+
+<p><strong>预处理</strong>：</p>
+<ul>
+<li>C/C++预处理器在<strong>词法分析之前</strong>执行，主要功能是<ul>
+<li>展开宏</li>
+<li>展开包含文件</li>
+<li>根据各种以#开头的预处理器指示略去部分代码</li>
+</ul>
+</li>
+</ul>
+<hr>
+<p><strong>词法分析：</strong></p>
+<ul>
+<li>处理源代码的文本输入，将语言结构分解为一组单词和标记，去除注释、空白、制表符等</li>
+<li>clang词法分析输出结果：</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ clang -cc1 -dump-tokens afl_inst_test.c<br>...<br></code></pre></td></tr></tbody></table></figure>
+
+<p>例如，在<code>fun()</code>[Line 4-6] 函数内的if语句高亮输出是：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-keyword">if</span> <span class="hljs-string">'if'</span>	 [StartOfLine] [LeadingSpace]	Loc=&lt;afl_inst_test.c:<span class="hljs-number">4</span>:<span class="hljs-number">2</span>&gt;<br>l_paren <span class="hljs-string">'('</span>		Loc=&lt;afl_inst_test.c:<span class="hljs-number">4</span>:<span class="hljs-number">4</span>&gt;<br>identifier <span class="hljs-string">'a'</span>		Loc=&lt;afl_inst_test.c:<span class="hljs-number">4</span>:<span class="hljs-number">5</span>&gt;<br>greater <span class="hljs-string">'&gt;'</span>	 [LeadingSpace]	Loc=&lt;afl_inst_test.c:<span class="hljs-number">4</span>:<span class="hljs-number">7</span>&gt;<br>numeric_constant <span class="hljs-string">'0'</span>	 [LeadingSpace]	Loc=&lt;afl_inst_test.c:<span class="hljs-number">4</span>:<span class="hljs-number">9</span>&gt;<br>r_paren <span class="hljs-string">')'</span>		Loc=&lt;afl_inst_test.c:<span class="hljs-number">4</span>:<span class="hljs-number">10</span>&gt;<br>l_brace <span class="hljs-string">'{'</span>		Loc=&lt;afl_inst_test.c:<span class="hljs-number">4</span>:<span class="hljs-number">11</span>&gt;<br><span class="hljs-keyword">return</span> <span class="hljs-string">'return'</span>	 [StartOfLine] [LeadingSpace]	Loc=&lt;afl_inst_test.c:<span class="hljs-number">5</span>:<span class="hljs-number">3</span>&gt;<br>minus <span class="hljs-string">'-'</span>	 [LeadingSpace]	Loc=&lt;afl_inst_test.c:<span class="hljs-number">5</span>:<span class="hljs-number">10</span>&gt;<br>identifier <span class="hljs-string">'a'</span>		Loc=&lt;afl_inst_test.c:<span class="hljs-number">5</span>:<span class="hljs-number">11</span>&gt;<br>semi <span class="hljs-string">';'</span>		Loc=&lt;afl_inst_test.c:<span class="hljs-number">5</span>:<span class="hljs-number">12</span>&gt;<br>r_brace <span class="hljs-string">'}'</span>	 [StartOfLine] [LeadingSpace]	Loc=&lt;afl_inst_test.c:<span class="hljs-number">6</span>:<span class="hljs-number">2</span>&gt;<br></code></pre></td></tr></tbody></table></figure>
+
+<hr>
+<p><strong>语法分析：</strong></p>
+<ul>
+<li><p>将词法分析产生的标记流作为输出，输出语法树（AST）</p>
+</li>
+<li><p>一个AST节点表明声明、语句和类型</p>
+</li>
+<li><p>语法解析器接受并处理在词法阶段生成的标记序列，每当发现一组要求的标记在一起的时候，此时会生成一个AST节点</p>
+<ul>
+<li><p>如每当发现一个标记tok::kw_if时，就会调用<code>ParseIfStatement()</code>函数处理if语句体中的所有标记，并为它们生成所必须的孩子AST节点和一个IfStmt根节点</p>
+</li>
+<li><pre><code class="c">// lib/Parse/ParseStmt.cpp
+...
+  case tok::kw_if:                  // C99 6.8.4.1: if-statement
+    return ParseIfStatement(TrailingElseLoc);
+  case tok::kw_switch:              // C99 6.8.4.2: switch-statement
+    return ParseSwitchStatement(TrailingElseLoc);
+...
+<figure class="highlight asciidoc"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs asciidoc"><br><span class="hljs-bullet">* </span>Clang并不在解析之后遍历AST，而是在AST节点生成过程中即时检查类型<br><br><span class="hljs-bullet">* </span>语法分析<span class="hljs-strong">**识别解析错误**</span><br><br><span class="hljs-bullet">* </span>Clang生成<span class="hljs-strong">**AST**</span>树：<br><br><span class="hljs-code">```bash</span><br><span class="hljs-code">$ clang -fsyntax-only -Xclang -ast-dump afl_inst_test.c</span><br><span class="hljs-code"># or clang -cc1 -ast-dump afl_inst_test.c [9]</span><br></code></pre></td></tr></tbody></table></figure>
+</code></pre>
+</li>
+</ul>
+</li>
+<li><p>AST树的可视化界面：</p>
+</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ clang -fsyntax-only -Xclang -ast-view afl_inst_test.c<br></code></pre></td></tr></tbody></table></figure>
+
+<hr>
+<p><strong>生成LLVM IR</strong></p>
+<ul>
+<li><p>经过词法分析和语义分析的联合处理之后，Clang会调用<code>CodeGenAction()</code>编译<strong>AST</strong>以生成<strong>LLVM IR</strong></p>
+</li>
+<li><p>前端流水线结束！</p>
+</li>
+</ul>
+<h4 id="中间端优化-11"><a href="#中间端优化-11" class="headerlink" title="中间端优化[11]"></a>中间端优化<sup>[11]</sup></h4><ul>
+<li><p>LLVM中间表示IR是连接前端和后端的中枢，让LLVM能够解析多种源语言，为多种目标生成代码</p>
+</li>
+<li><p>前端产生IR，后端也接收IR</p>
+</li>
+<li><p>引入IR的出发点：<span class="github-emoji"><span>1⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 解决不同语言源代码的差异性； <span class="github-emoji"><span>2⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 便于生成不同平台相异的机器指令集</p>
+<ul>
+<li>通用性</li>
+<li>高级IR能够让优化器轻松提炼出原始源代码的意图；低级IR让编译器能够更容易生成为特定硬件优化的代码</li>
+</ul>
+</li>
+<li><p>IR的三种等价形式：</p>
+<ul>
+<li>驻留内存的表示（指令类等）</li>
+<li>磁盘上以空间高效方式编码的位表示（bitcode文件）</li>
+<li>磁盘上的人类可读文本表示（LLVM汇编文件）</li>
+</ul>
+</li>
+<li><p>IR的工作流图：</p>
+</li>
+</ul>
+<p><img src="/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/7.png" srcset="/img/loading.gif" lazyload></p>
+<center>图7 LLVM IR工作流图</center>
+
+<hr>
+<p><strong>Clang生成IR：</strong></p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">// sum.c</span><br><span class="hljs-type">int</span> <span class="hljs-title function_">sum</span><span class="hljs-params">(<span class="hljs-type">int</span> a, <span class="hljs-type">int</span> b)</span> {<br>  <span class="hljs-keyword">return</span> a+b;<br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>生成bitcode：</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ clang sum.c -emit-llvm -c -o sum.bc<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>生成汇编表示：</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ clang sum.c -emit-llvm -S -c -o sum.ll<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>汇编LLVM IR汇编文本以生成bitcode：</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ llvm-as sum.ll -o sum.bc<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>反编译bitcode为IR汇编：</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ llvm-dis sum.bc -o sum.ll<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>llvm-extract工具提取IR函数、全局变量，还能从IR模块中删除全局变量：</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ llvm-extract -func=<span class="hljs-built_in">sum</span> sum.bc -o sum-fn.bc<br></code></pre></td></tr></tbody></table></figure>
+
+<h4 id="后端生成-12"><a href="#后端生成-12" class="headerlink" title="后端生成[12]"></a>后端生成<sup>[12]</sup></h4><ul>
+<li>后端主要的步骤就是将LLVM IR转换为目标汇编代码，具体步骤如图8所示：</li>
+</ul>
+<p><img src="/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/8.png" srcset="/img/loading.gif" lazyload></p>
+<center>图8 LLVM IR到目标汇编代码的流程</center>
+
+<ul>
+<li><p>简要描述上述代码生成的各个阶段：</p>
+<ul>
+<li><p><strong>指令选择</strong>（instruction selection）：</p>
+<p><span class="github-emoji"><span>1⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 将内存中的IR表示变换为目标特定的selectionDAG节点，每一个DAG表示单一基本块的计算</p>
+<p>你可以使用debug版本的llc来生成selectionDAG节点信息：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ /llvm-project/build/bin/llc -debug sum.bc <span class="hljs-comment"># 这里使用debug版本的clang！</span><br>...<br>SelectionDAG has 18 nodes:<br>  t0: ch = EntryToken<br>  t6: i64 = Constant&lt;0&gt;<br>      t2: i32,ch = CopyFromReg t0, Register:i32 %0<br>    t8: ch = store&lt;ST4[%a.addr]&gt; t0, t2, FrameIndex:i64&lt;0&gt;, undef:i64<br>    t4: i32,ch = CopyFromReg t0, Register:i32 %1<br>  t10: ch = store&lt;ST4[%b.addr]&gt; t8, t4, FrameIndex:i64&lt;1&gt;, undef:i64<br>      t11: i32,ch = load&lt;LD4[%a.addr](dereferenceable)&gt; t10, FrameIndex:i64&lt;0&gt;, undef:i64<br>      t12: i32,ch = load&lt;LD4[%b.addr](dereferenceable)&gt; t10, FrameIndex:i64&lt;1&gt;, undef:i64<br>    t13: i32 = add nsw t11, t12<br>  t16: ch,glue = CopyToReg t10, Register:i32 %eax, t13<br>  t17: ch = X86ISD::RET_FLAG t16, TargetConstant:i32&lt;0&gt;, Register:i32 %eax, t16:1<br>...<br></code></pre></td></tr></tbody></table></figure>
+
+<p>此外，你可以执行下面的命令来生成selectionDAG图：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ /llvm-project/build/bin/llc -view-dag-combine1-dags sum.bc -fast-isel=<span class="hljs-literal">false</span><br></code></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/9.png" srcset="/img/loading.gif" lazyload></p>
+<center>图9 sum函数的SelectionDAG图</center>
+
+<p><span class="github-emoji"><span>2⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 利用<strong>模式匹配</strong>将目标无关的节点转换为目标特定的节点，而指令选择的算法是局部的，每次作用SelectionDAG（基本块）的实例</p>
+<p>可以执行一下命令生成指令选择后的SelectionDAG图：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ /llvm-project/build/bin/llc -view-sched-dags sum.bc -fast-isel=<span class="hljs-literal">false</span><br></code></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/10.png" srcset="/img/loading.gif" lazyload></p>
+<center>图10 指令选择后的sum函数的SelectionDAG图</center>
+
+<p>由上图我们可以看到，在指令选择之后，原先DAG图中的add节点被替换成ADD32rr，X86ISD::RET_FLAG被替换为RET，load被替换为MOV32rm，store被替换为MOV32mr</p>
+</li>
+<li><p><strong>指令调度</strong>（instruction scheduling）：</p>
+<ul>
+<li>指令延迟表：根据具体硬件信息来提高指令级并行，从而提高在计算机上指令流水线的性能 [14]</li>
+<li>风险检测与识别</li>
+<li>调度单元</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ /llvm-project/build/bin/llc -view-sunit-dags sum.bc -fast-isel=<span class="hljs-literal">false</span><br></code></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/11.png" srcset="/img/loading.gif" lazyload></p>
+<center>图11 调度单元图</center>
+</li>
+<li><p><strong>寄存器分配</strong>（Register allocation）</p>
+<ul>
+<li><p>作用在<strong>机器指令</strong>上：</p>
+<ul>
+<li>在指令调度之后，InstrEmitter Pass会被运行，它将<code>SDNode</code>格式转换为<code>MachineInstr</code>格式</li>
+<li>该表示相较于IR指令更接近实际的目标指令</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ /llvm-project/build/bin/llc -march=sparc -print-machineinstrs sum.bc<br>...<br><span class="hljs-comment"># After Instruction Selection:</span><br><span class="hljs-comment"># Machine code for function sum: IsSSA, TracksLiveness</span><br>Frame Objects:<br>  <span class="hljs-keyword">fi</span><span class="hljs-comment">#0: size=4, align=4, at location [SP]</span><br>  <span class="hljs-keyword">fi</span><span class="hljs-comment">#1: size=4, align=4, at location [SP]</span><br>Function Live Ins: %i0 <span class="hljs-keyword">in</span> %0, %i1 <span class="hljs-keyword">in</span> %1<br><br>%bb.0: derived from LLVM BB %entry<br>    Live Ins: %i0 %i1<br>	%1:intregs = COPY %i1; IntRegs:%1<br>	%0:intregs = COPY %i0; IntRegs:%0<br>	%3:intregs = COPY %1; IntRegs:%3,%1<br>	%2:intregs = COPY %0; IntRegs:%2,%0<br>	STri %stack.0.a.addr, 0, %0; mem:ST4[%a.addr] IntRegs:%0<br>	STri %stack.1.b.addr, 0, %1; mem:ST4[%b.addr] IntRegs:%1<br>	%4:intregs = LDri %stack.0.a.addr, 0; mem:LD4[%a.addr](dereferenceable) IntRegs:%4<br>	%5:intregs = LDri %stack.1.b.addr, 0; mem:LD4[%b.addr](dereferenceable) IntRegs:%5<br>	%6:intregs = ADDrr killed %4, killed %5; IntRegs:%6,%4,%5<br>	%i0 = COPY %6; IntRegs:%6<br>	RETL 8, implicit %i0<br>...<br></code></pre></td></tr></tbody></table></figure>
+</li>
+<li><p><strong>基本任务：</strong>将无限数量的虚拟寄存器转换为有限的物理寄存器</p>
+</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ /llvm-project/build/bin/llc -print-after=greedy sum.bc<br><span class="hljs-comment"># *** IR Dump After Greedy Register Allocator ***:</span><br><span class="hljs-comment"># Machine code for function sum: NoPHIs, TracksLiveness</span><br>Frame Objects:<br>  <span class="hljs-keyword">fi</span><span class="hljs-comment">#0: size=4, align=4, at location [SP+8]</span><br>  <span class="hljs-keyword">fi</span><span class="hljs-comment">#1: size=4, align=4, at location [SP+8]</span><br>Function Live Ins: %edi <span class="hljs-keyword">in</span> %0, %esi <span class="hljs-keyword">in</span> %2<br><br>0B	%bb.0: derived from LLVM BB %entry<br>	    Live Ins: %edi %esi<br>16B		%3:gr32 = COPY %esi; GR32:%3<br>32B		%1:gr32 = COPY %edi; GR32:%1<br>80B		MOV32mr %stack.0.a.addr, 1, %noreg, 0, %noreg, %1; mem:ST4[%a.addr] GR32:%1<br>96B		MOV32mr %stack.1.b.addr, 1, %noreg, 0, %noreg, %3; mem:ST4[%b.addr] GR32:%3<br>112B		%7:gr32 = MOV32rm %stack.0.a.addr, 1, %noreg, 0, %noreg; mem:LD4[%a.addr] GR32:%7<br>144B		%7:gr32 = ADD32rm %7, %stack.1.b.addr, 1, %noreg, 0, %noreg, implicit-def dead %eflags; mem:LD4[%b.addr] GR32:%7<br>160B		%eax = COPY %7; GR32:%7<br>176B		RETQ implicit %eax<br><br><span class="hljs-comment"># End machine code for function sum.</span><br><br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>寄存器合并器、虚拟寄存器重写和目标钩子</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="II-AFL如何进行插桩？"><a href="#II-AFL如何进行插桩？" class="headerlink" title="II. AFL如何进行插桩？"></a>II. AFL如何进行插桩？</h2><ul>
+<li><p>原生AFL有<strong>两种插桩方式</strong></p>
+<ul>
+<li><p>基于编译器生成的汇编文件的插桩</p>
+<ul>
+<li>关键文件有两个，分别是<code>afl-gcc.c</code>和<code>afl-as.c</code></li>
+<li><code>afl-gcc/g++/clang/clang++/gcj</code>：编译器（gcc、clang、gcj）的一个wrapper <span class="github-emoji"><span>➡</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/27a1.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 编译器产生汇编文件</li>
+<li><code>afl-as</code>：汇编器（as）的一个wrapper <span class="github-emoji"><span>➡</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/27a1.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 对编译器产生的汇编文件进行插桩，然后调用<code>as</code>生成目标文</li>
+</ul>
+<p>图解：</p>
+<p><img src="/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/12.png" srcset="/img/loading.gif" lazyload></p>
+<center>图12 基于编译器的AFL插桩流程</center>
+</li>
+<li><p>基于LLVM模式的插桩</p>
+<ul>
+<li>关键文件即<code>llvm_mode</code>文件夹下的所有文件</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="a-基于编译器汇编文件的插桩"><a href="#a-基于编译器汇编文件的插桩" class="headerlink" title="a. 基于编译器汇编文件的插桩"></a>a. 基于编译器汇编文件的插桩</h3><h4 id="1-afl-gcc-c"><a href="#1-afl-gcc-c" class="headerlink" title="1. afl-gcc.c"></a>1. afl-gcc.c</h4><ul>
+<li><p>是主流编译器的一个wrapper，根据具体调用的<code>afl-xxx</code>编译器名来进行分流：</p>
+<ul>
+<li><p><code>afl-xxx</code>编译器都是<code>afl-gcc</code>的一个软链接，如下所示</p>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ ll afl-gcc afl-g++ afl-clang afl-clang++<br>lrwxrwxrwx 1 chan chan     7 Nov  3 23:52 afl-clang -&gt; afl-gcc*<br>lrwxrwxrwx 1 chan chan     7 Nov  3 23:52 afl-clang++ -&gt; afl-gcc*<br>lrwxrwxrwx 1 chan chan     7 Nov  3 23:52 afl-g++ -&gt; afl-gcc*<br>-rwxrwxr-x 1 chan chan 22976 Nov  3 23:52 afl-gcc*<br></code></pre></td></tr></tbody></table></figure></li>
+</ul>
+</li>
+<li><p>与<code>afl-as</code>的结合使用：使用<code>gcc/clang</code> <code>-B</code>选项来指定汇编器路径，即AFL本身的路径</p>
+<p>换言之，<code>afl-gcc</code>本质上还是调用的原来的编译器，只不过将汇编器替换为了<code>afl-as</code>（而<code>afl-as</code>的主要作用就是进行插桩！）</p>
+</li>
+<li><p><strong>源码解析</strong>：</p>
+<ul>
+<li><p><code>find_as()</code>：在环境变量<code>AFL_PATH</code>【AFL本身的路径】提供”假的”GNU汇编器，即<code>AFL_PATH/as</code>；或者根据<code>argv[0]</code>的路径进行派生。<span class="github-emoji"><span>📓</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f4d3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 注：这里的<code>as</code>本身也是<code>afl-as</code>的一个软链接，如下所示：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ ll afl-as as<br>-rwxrwxr-x 1 chan chan 37544 Nov  3 23:52 afl-as*<br>lrwxrwxrwx 1 chan chan     6 Nov  3 23:52 as -&gt; afl-as*<br></code></pre></td></tr></tbody></table></figure>
+</li>
+<li><p><code>edit_params()</code>：构造新的命令行选项，即将<code>argv</code>中的选项拷贝到<code>cc_params</code>中，同时提供一些必要的编辑：</p>
+<ul>
+<li><p>首先对<code>argv[0]</code>进行匹配，即进行分流：</p>
+<p><code>afl-clang</code> =&gt; <code>clang</code>; </p>
+<p><code>afl-clang++</code> =&gt; <code>clang++</code>; </p>
+<p><code>afl-g++</code> =&gt; <code>g++</code>; </p>
+<p><code>afl-gcj</code> =&gt; <code>gcj</code>; </p>
+<p><code>afl-gcc</code> =&gt; <code>gcc</code></p>
+</li>
+<li><p>然后将<code>argv</code>中其他的选项拷贝到<code>cc_params</code>，在这过程中，对一些选项进行处理：</p>
+<ul>
+<li><code>-B</code>将被覆写</li>
+<li><code>-integrated-as</code>、<code>-pipe</code>、将被删除</li>
+<li>如果遇到<code>-fsanitize=address</code>或<code>-fsanitize=memory</code>时，将<code>asan_set</code>标志变量设置为1，将选项添加到<code>cc_params</code></li>
+<li>如果遇到<code>FORTIFY_SOURCE</code>设置项，则将<code>fortify_set</code>标志变量设置为1，将选项添加到<code>cc_params</code>  <em># 编译器的一种安全检测机制，防溢出</em></li>
+</ul>
+</li>
+<li><p>然后添加-B选项，即<code>-B as_path</code>，<code>as_path</code>为<code>find_as()</code>函数设置的汇编器路径。接着进行5个判断：</p>
+<ul>
+<li><p>如果是<code>clang_mode</code>，添加<code>-no-integrated-as</code>选项以避免使用clang集成的汇编器</p>
+</li>
+<li><p>如果设置了环境变量<code>AFL_HARDEN</code>，则添加 <code>-fstack-protector-all</code> [15] 和 <code>-D_FORTIFY_SOURCE=2</code></p>
+</li>
+<li><p>如果<code>asan_set == 1</code>，则将环境变量<code>AFL_USE_ASAN</code>设置为1；否则，判断是否设置了<code>AFL_USE_ASAN</code>或<code>AFL_USE_MSAN</code>，并检查相应的互斥性和添加相应的选项（<code>-U_FORTIFY_SOURCE</code> 和 <code>-fsanitize=address/memory</code>）</p>
+</li>
+<li><p>如果设置了环境变量<code>AFL_DONT_OPTIMIZE</code>，那么将不进行优化操作，否则将添加下述选项：</p>
+<table>
+<thead>
+<tr>
+<th>选项</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>-g</td>
+<td>全局绑定，主要用于debug</td>
+</tr>
+<tr>
+<td>-O3</td>
+<td>O3级优化</td>
+</tr>
+<tr>
+<td>-funroll-loops</td>
+<td>避免优化器展开循环，其主要目的有两个：<br><span class="github-emoji"><span>1⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 便于对循环体的边进行跟踪<br><span class="github-emoji"><span>2⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 避免循环体内其他边的数量爆炸（循环展开后会产生冗余边）</td>
+</tr>
+<tr>
+<td>-D__AFL_COMPILER=1</td>
+<td># 不是编译器本身的选项<br>在ChangeLog中，该变量用来指示该程序是在afl-gcc / afl-clang / afl-clang-fast下构建的，并且允许自定义的优化</td>
+</tr>
+<tr>
+<td>-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION=1</td>
+<td>-</td>
+</tr>
+</tbody></table>
+</li>
+<li><p>如果设置了环境变量<code>AFL_NO_BUILTIN</code>，那么将不进行相关函数的内置替换（即汇编处将使用<code>call</code>相关函数，对于<code>AFL插桩</code>来说，这将引入额外的开销，因此默认进行<code>builtin</code>）。具体来说，通过添加下述选项来实现：</p>
+<table>
+<thead>
+<tr>
+<th align="center">选项</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">-fno-builtin-strcmp</td>
+</tr>
+<tr>
+<td align="center">-fno-builtin-strncmp</td>
+</tr>
+<tr>
+<td align="center">-fno-builtin-strcasecmp</td>
+</tr>
+<tr>
+<td align="center">-fno-builtin-strncasecmp</td>
+</tr>
+<tr>
+<td align="center">-fno-builtin-memcmp</td>
+</tr>
+<tr>
+<td align="center">-fno-builtin-strstr</td>
+</tr>
+<tr>
+<td align="center">-fno-builtin-strcasestr</td>
+</tr>
+</tbody></table>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p><code>execvp()</code>：执行构造的命令行，即<code>cc_params</code>。该命令行将调用编译器生成相应的可执行文件，正如前所述，<code>-B</code>指定了<code>afl</code>的汇编器进行插桩操作，因此下面我们将详细介绍<code>afl-as.c</code>的具体流程。</p>
+</li>
+</ul>
+</li>
+</ul>
+<h4 id="2-afl-as-c"><a href="#2-afl-as-c" class="headerlink" title="2. afl-as.c"></a>2. afl-as.c</h4><ul>
+<li><p>由前所述，<code>afl-gcc/clang/g++/clang++/gcj</code>通过<code>-B</code>参数指定了<code>AFL的汇编器</code>路径，那么在gcc/g++/clang/clang++/gcj生成目标文件/可执行文件的过程中，将使用afl-as作为其编译器，而afl-as本身也是as一个wrapper：</p>
+<ul>
+<li>先对编译器产生的汇编文件进行<strong>插桩</strong></li>
+<li>然后再调用系统的<code>as</code>来<strong>生成相应的机器码</strong></li>
+</ul>
+</li>
+<li><p><span class="github-emoji"><span>💭</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f4ad.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 但是这样一来无法对<code>afl-as</code>进行调试？</p>
+<ul>
+<li><p>经过对<code>afl-as</code>的简单分析，我们可以先通过<code>afl-gcc -S</code>生成汇编文件，然后将汇编文件放置在<code>tmp</code>目录下</p>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ afl-gcc -S afl_inst_test.c -o afl_inst_test.s<br>afl-cc 2.57b by &lt;lcamtuf@google.com&gt;<br>afl_inst_test.c: In <span class="hljs-keyword">function</span> ‘main’:<br>afl_inst_test.c:12:2: warning: ignoring <span class="hljs-built_in">return</span> value of ‘scanf’, declared with attribute warn_unused_result [-Wunused-result]<br>  scanf(<span class="hljs-string">"%d"</span>, &amp;a);<br>  ^~~~~~~~~~~~~~~<br>$ <span class="hljs-built_in">mv</span> afl_inst_test.s /tmp<br></code></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>使用<code>afl-as</code>对上述产生的汇编文件进行汇编操作：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ /home/chan/some_c_test/AFLAPI/afl-as -o afl_inst_test.o /tmp/afl_inst_test.s<br>afl-as 2.57b by &lt;lcamtuf@google.com&gt;<br>[+] Instrumented 4 locations (64-bit, non-hardened mode, ratio 100%).<br></code></pre></td></tr></tbody></table></figure>
+
+<p>:happy:由上述的结果，我们可以看出该汇编文件已经成功插桩了。但这里我们无法捕获到插桩后的汇编文件，因此需要对<code>afl-as</code>进行debug。</p>
+</li>
+</ul>
+</li>
+<li><p><strong>源码解析</strong>：</p>
+<p>一些局部变量：inst_ratio_str =&gt; <strong>inst_ratio</strong> [默认为100，插桩率 0~100]；<strong>sanitizer</strong> [是否启用ASAN/MSAN?] </p>
+<ul>
+<li><p><code>srandom()</code>：置时间种子，种子由当前时间的秒、微秒和进程pid异或得到</p>
+</li>
+<li><p><code>edit_params()</code>：构造汇编所使用的命令行</p>
+<ul>
+<li><p>环境变量<code>TMPDIR</code>可以自定义临时文件夹，此外，环境变量<code>TEMP</code>和<code>TMP</code>同样有相同的功能，否则<code>tmp_dir</code>默认为”<code>/tmp</code>“，这也是我们之前将汇编文件放置在<code>tmp</code>目录下的原因 <span class="github-emoji"><span>✋</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/270b.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span></p>
+</li>
+<li><p>然后将原<code>argv</code>【前 <code>argc-1</code> 个选项】拷贝到<code>as_params[]</code>中。这里检测原命令行中是否出现<code>"--64"</code> / <code>"--32"</code>  =&gt; 将<code>use_64bit</code>标志变量相应的设置为1 / 0</p>
+<p><span class="github-emoji"><span>⚠</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/26a0.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 注：在调用<code>afl-as</code>时，必须将输入文件放置在最后，即<code>afl-as -o xxx.o xxx.s</code><span class="github-emoji"><span>✔</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/2714.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span>，<code>afl-as xxx.s -o xxx.o</code><span class="github-emoji"><span>❌</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/274c.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> </p>
+<p><code>input_file = argv[argc - 1] // xxx.s</code></p>
+</li>
+<li><p>判断<code>input_file</code>是否在<code>/tmp</code>或<code>/var/tmp</code>，如果不再则将<code>pass_thru</code>置为1【这会导致后面不进行插桩操作】</p>
+<p><code>modified_file</code>为插桩后汇编文件，这里根据时间和pid随机分配一个名字，如<code>/tmp/.afl-4270-1669033267.s</code></p>
+<p>然后将<code>modified_file</code>添加到<code>as_params</code>最后，作为汇编器的输入文件！</p>
+</li>
+</ul>
+</li>
+<li><p>如果设置了环境变量<code>AFL_USE_ASAN</code>或<code>AFL_USE_MSAN</code>，将sanitizer置为1，且将<strong>插桩率inst_ratio除以3</strong></p>
+<p><span class="github-emoji"><span>❓</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/2753.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 这里为啥要将<code>inst_ratio</code>除以3？</p>
+<blockquote>
+<p>源码注释中作者这样描述：</p>
+<p>“在使用ASAN编译时，没有一个特别优雅的方法跳过ASAN特有的分支，但可以通过插桩率上进行补偿…”</p>
+<p>见解：<span class="github-emoji"><span>1⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> ASAN会引入由ASAN所导致的特定分支，而如前所述，ASAN插桩是在编译过程完成的，而AFL在编译器生成的汇编基础上进行插桩，因此会对ASAN本身特定的分支进行插桩。概率插桩（33%）在一定程度上能够反映软件的真实覆盖率大小。</p>
+<p><span class="github-emoji"><span>2⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> ASAN的插桩是<strong>重量级</strong>的，因此ASAN引入的边可能会导致比特位图碰撞性提升，而概率插桩能够解决这一问题</p>
+</blockquote>
+</li>
+<li><p><code>add_instrumentation()</code>：对汇编文件进行<strong>插桩</strong>（分支处插桩 + 相关调用函数）</p>
+<ul>
+<li><p>如果<code>input_file</code>文件不能打开，则将<code>stdin</code>作为输入；<code>modified_file</code>作为输出文件；</p>
+</li>
+<li><p>【<strong>分支处插桩</strong>】读取<code>input_file</code>中的每一行，并做一系列的判断，其主要找到三个位置：</p>
+<ul>
+<li><strong>函数头：</strong></li>
+</ul>
+<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs assembly">function_name:<br>.LFB23:<br>	.file 1 "afl_inst_test.c"<br>	.loc 1 3 0<br>	.cfi_startproc<br>.LVL0:<br>	.loc 1 5 0<br>	# &lt;&lt;======== instrumentation here<br>	movl	%edi, %eax<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li><strong>jx/jxx的两条分支：</strong></li>
+</ul>
+<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><code class="hljs assembly"># branch 1<br>.LVL7:<br>	.loc 1 14 0<br>	movl	4(%rsp), %edx<br>	cmpl	$0, %edx<br>	jg	.L11<br>	# &lt;&lt;======== instrumentation here<br>	.loc 1 16 0<br>	jne	.L12<br>	# &lt;&lt;======== instrumentation here<br>...<br># branch 2<br>.L11:<br>	.cfi_restore_state<br>.LVL10:<br>.LBB26:<br>.LBB27:<br>	.loc 2 104 0<br>	# &lt;&lt;======== instrumentation here<br>	leaq	.LC2(%rip), %rsi<br>	movl	$1, %edi<br>	xorl	%eax, %eax<br>	call	__printf_chk@PLT<br>.LVL11:<br>	jmp	.L7<br>.LVL12:<br>.L12:<br>.LBE27:<br>.LBE26:<br>.LBB28:<br>.LBB29:<br>	# &lt;&lt;======== instrumentation here<br>	leaq	.LC3(%rip), %rsi<br>	movl	$1, %edi<br>	xorl	%eax, %eax<br>	call	__printf_chk@PLT<br></code></pre></td></tr></tbody></table></figure>
+
+<p><span class="github-emoji"><span>🤔</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f914.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 汇编中<code>.</code>开头标识的意义 [16]：</p>
+<p><span class="github-emoji"><span>1⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <code>.loc</code>：**Line Of Code [-g?]**，格式为 <code>.loc 文件序号 行序号 [列] [选项]</code>，在上示例中，<code>.loc 1 14 0</code>表示file 1：afl_inst_test.c，第14行第0列 [17]</p>
+<p><span class="github-emoji"><span>2⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> GCC使用<code>.L</code>用于<strong>本地标签</strong></p>
+<blockquote>
+<p>本地符号是以某种本地标签前缀开头的任何符号，默认情况下，ELF系列的本地标签前缀是“.L”</p>
+<p>本地符号在汇编器中被定义和使用，但它们通常不被保存在目标文件中。因此在调试时它们是不可见的。可以使用<code>-L</code>选项保留目标文件中的本地符号 [18]</p>
+<p>e.g.</p>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><code class="hljs bash">&gt;/tmp$ as -c -L afl_inst_test.s <span class="hljs-comment"># you can also use `as --keep-locals -c afl_inst_test.s`</span><br>&gt;/tmp$ nm a.out<br>&gt;0000000000000000 T fun<br>      U _GLOBAL_OFFSET_TABLE_<br>      U __isoc99_scanf<br>&gt;000000000000006d t .L11<br>&gt;0000000000000082 t .L12<br>&gt;0000000000000097 t .L13<br>&gt;...<br>&gt;/tmp$ as -c afl_inst_test.s <br>&gt;/tmp$ nm a.out<br>&gt;0000000000000000 T fun<br>      U _GLOBAL_OFFSET_TABLE_<br>      U __isoc99_scanf<br>&gt;0000000000000000 r .LC0<br>&gt;0000000000000000 r .LC1<br>&gt;0000000000000003 r .LC2<br>&gt;000000000000001c r .LC3<br>&gt;0000000000000035 r .LC4<br>&gt;0000000000000000 T main<br>      U __printf_chk<br>      U __stack_chk_fail<br>&gt;/tmp$ <br></code></pre></td></tr></tbody></table></figure>
+</blockquote>
+<p><span class="github-emoji"><span>3⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0033-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <code>.L</code><strong>前缀</strong>（是DWARF调试信息，不重要）：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> FUNC_BEGIN_LABEL  <span class="hljs-string">"LFB"</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> FUNC_END_LABEL    <span class="hljs-string">"LFE"</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> BLOCK_BEGIN_LABEL <span class="hljs-string">"LBB"</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> BLOCK_END_LABEL   <span class="hljs-string">"LBE"</span></span><br>ASM_GENERATE_INTERNAL_LABEL (loclabel, <span class="hljs-string">"LVL"</span>, loclabel_num);<br></code></pre></td></tr></tbody></table></figure>
+
+<p>LFB：函数开始； LFE：函数结束；LBB：块开始；LBE：块结束；LVL：尚不知</p>
+<p>详见 [19]</p>
+</li>
+<li><p>【相关调用函数的附加】最后，将<code>main_payload_64</code>或<code>main_payload_32</code>添加到汇编文件的末尾处。至此，所有的插桩过程均已完成！</p>
+</li>
+</ul>
+</li>
+<li><p><code>execvp()</code>：<code>fork</code>一个子进程执行构造的新的<code>as_params</code>，即对插桩后的汇编文件进行汇编操作。最后删除临时文件 [<code>modified_file</code>]，至此，汇编任务完成</p>
+</li>
+</ul>
+</li>
+</ul>
+<h4 id="3-afl-as-h-桩代码解析"><a href="#3-afl-as-h-桩代码解析" class="headerlink" title="3. afl-as.h (桩代码解析)"></a>3. afl-as.h (桩代码解析)</h4><ul>
+<li>主要有两个桩代码：<span class="github-emoji"><span>1⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <code>trampoline_fmt_64/trampoline_fmt_32</code>；<span class="github-emoji"><span>2⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <code>main_payload_64/main_payload_32</code>；</li>
+</ul>
+<p><span class="github-emoji"><span>1⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <code>trampoline_fmt_64/trampoline_fmt_32</code>（以64位为例）：</p>
+<ul>
+<li>汇编码：</li>
+</ul>
+<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><code class="hljs assembly">/* --- AFL TRAMPOLINE (64-BIT) --- */<br><br>.align 4<br><br>leaq -(128+24)(%rsp), %rsp # 分配152字节的栈空间<br>movq %rdx,  0(%rsp) # 保存现场<br>movq %rcx,  8(%rsp)<br>movq %rax, 16(%rsp)<br>movq $0x%08x, %rcx    /* %08x是一个比特位图大小内的随机数 */<br>call __afl_maybe_log<br>movq 16(%rsp), %rax # 恢复现场<br>movq  8(%rsp), %rcx<br>movq  0(%rsp), %rdx<br>leaq (128+24)(%rsp), %rsp # 复原栈<br><br>/* --- END --- */<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>上述汇编码调用了<code>__afl_maybe_log(%rcx[i.e.当前分支对应的随机数])</code>来记录边的情况</li>
+</ul>
+<p><span class="github-emoji"><span>2⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <code>main_payload_64/main_payload_32</code>（以64位为例）：</p>
+<ul>
+<li>汇编码主要包括10个函数，分别是：<code>__afl_maybe_log</code>、<code>__afl_store</code>、<code>__afl_return</code>、<code>__afl_setup</code>、<code>__afl_setup_first</code>、<code>__afl_forkserver</code>、<code>__afl_fork_wait_loop</code>、<code>__afl_fork_resume</code>、<code>__afl_die</code>、<code>__afl_setup_abort</code></li>
+<li><code>__afl_maybe_log</code>、<code>__afl_store</code>、<code>__afl_return</code>：</li>
+</ul>
+<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><code class="hljs assembly">__afl_maybe_log:<br><br>  lahf							   # save other flags to AH<br>  seto  %al						   # set OF to al<br><br>  /* Check if SHM region is already mapped. */<br><br>  movq  __afl_area_ptr(%rip), %rdx # __afl_area_ptr是共享的bitmap位图内存块<br>  testq %rdx, %rdx<br>  je    __afl_setup				   # je =&gt; jz 即判断该地址是否为0；如果为0，则进行初始化<br>  <br>__afl_store:<br><br>  /* Calculate and store hit for the code location specified in rcx. */<br><br>  xorq __afl_prev_loc(%rip), %rcx  # %rcx = pre ^ cur<br>  xorq %rcx, __afl_prev_loc(%rip)  # __afl_prev_loc = pre ^ cur ^ pre = cur<br>  shrq $1, __afl_prev_loc(%rip)    # __afl_prev_loc = cur &gt;&gt; 1<br>  # (pre &gt;&gt; 1) ^ cur<br>  incb (%rdx, %rcx, 1)             # __afl_area_ptr[%rcx] = __afl_area_ptr[%rcx] + 1<br><br>__afl_return:<br><br>  addb $127, %al				   # restore OF (if OF=1, al+127=128 =&gt; OF=1 else OF=0)<br>  sahf							   # restore other flags<br>  ret<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li><code>__afl_setup</code>：</li>
+</ul>
+<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><code class="hljs assembly">.align 8<br><br>__afl_setup:<br><br>  /* Do not retry setup if we had previous failures. */<br><br>  cmpb $0, __afl_setup_failure(%rip)  # 变量__afl_setup_failure如果为0，表示之前配置没问题，否则表示之前出错了，那么返回<br>  jne __afl_return<br><br>  /* Check out if we have a global pointer on file. */<br><br>  movq  __afl_global_area_ptr@GOTPCREL(%rip), %rdx  # 将__afl_global_area_ptr移送到%rdx<br>  movq  (%rdx), %rdx							    # 将%rdx指向的值赋值给%rdx<br>  testq %rdx, %rdx									# 判断%rdx是否为0，如果为0，表明未进行初始化操作<br>  je    __afl_setup_first							# 跳转到__afl_setup_first进行初始化操作<br><br>  movq %rdx, __afl_area_ptr(%rip)					# 将全局指针赋值给__afl_area_ptr<br>  jmp  __afl_store									# 更新全局边计数<br><br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li><code>__afl_setup_first</code>、<code>__afl_forkserver</code>、<code>__afl_fork_resume</code>和<code>__afl_die</code>：</li>
+</ul>
+<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br></pre></td><td class="code"><pre><code class="hljs assembly">__afl_setup_first:<br><br>  /* Save everything that is not yet saved and that may be touched by<br>     getenv() and several other libcalls we'll be relying on. */<br><br>  leaq -352(%rsp), %rsp<br>  <br>  # 保护现场<br>  movq %rax,   0(%rsp)<br>  movq %rcx,   8(%rsp)<br>  movq %rdi,  16(%rsp)<br>  movq %rsi,  32(%rsp)<br>  movq %r8,   40(%rsp)<br>  movq %r9,   48(%rsp)<br>  movq %r10,  56(%rsp)<br>  movq %r11,  64(%rsp)<br><br>  movq %xmm0,  96(%rsp)<br>  movq %xmm1,  112(%rsp)<br>  movq %xmm2,  128(%rsp)<br>  movq %xmm3,  144(%rsp)<br>  movq %xmm4,  160(%rsp)<br>  movq %xmm5,  176(%rsp)<br>  movq %xmm6,  192(%rsp)<br>  movq %xmm7,  208(%rsp)<br>  movq %xmm8,  224(%rsp)<br>  movq %xmm9,  240(%rsp)<br>  movq %xmm10, 256(%rsp)<br>  movq %xmm11, 272(%rsp)<br>  movq %xmm12, 288(%rsp)<br>  movq %xmm13, 304(%rsp)<br>  movq %xmm14, 320(%rsp)<br>  movq %xmm15, 336(%rsp)<br><br>  /* Map SHM, jumping to __afl_setup_abort if something goes wrong. */<br><br>  /* The 64-bit ABI requires 16-byte stack alignment. We'll keep the<br>     original stack ptr in the callee-saved r12. */<br><br>  pushq %r12<br>  movq  %rsp, %r12					# 将%rsp暂存到%r12中<br>  subq  $16, %rsp					# 为%rsp分配16字节的空间<br>  andq  $0xfffffffffffffff0, %rsp   # %rsp最后四位清空变为0 ==&gt; 栈地址对齐到16字节（地址是16的整数倍）<br><br>  leaq .AFL_SHM_ENV(%rip), %rdi		# 将字符串"__AFL_SHM_ID"地址保存到%rdi<br>call getenv@PLT						# 调用getenv，即getenv("__AFL_SHM_ID")<br><br>  testq %rax, %rax					# getenv返回值将移送到$rax，这里判断rax是否为0，如果返回值为0则跳转到__afl_setup_abort<br>  je    __afl_setup_abort<br><br>  movq  %rax, %rdi					# 将getenv返回的字符串地址移送到%rdi(第一个参数)<br>call atoi@PLT						# 调用atoi将环境变量__AFL_SHM_ID的值转为整型，返回的整型值保存在%rax中<br><br>  xorq %rdx, %rdx   /* shmat flags    */<br>  xorq %rsi, %rsi   /* requested addr */<br>  movq %rax, %rdi   /* SHM ID         */<br>call shmat@PLT						# 调用shmat(shmid --&gt; %rdi = %rax[atoi返回值], shmaddr --&gt; %rsi = 0, shmflg --&gt; %rdx = 0)<br><br>  cmpq $-1, %rax					# 返回 -1 表示shmat调用失败，则跳转到__afl_setup_abort<br>  je   __afl_setup_abort<br><br>  /* Store the address of the SHM region. */<br><br>  movq %rax, %rdx					# %rax保存着返回的共享地址<br>  movq %rax, __afl_area_ptr(%rip)   # %rax保存到__afl_area_ptr变量中<br><br>  movq __afl_global_area_ptr@GOTPCREL(%rip), %rdx  # __afl_global_area_ptr指针移送到%rdx<br>  movq %rax, (%rdx)					# 将返回的共享地址移送到__afl_global_area_ptr指针所指向的值<br>  movq %rax, %rdx					# 将返回的地址保存到%rdx中<br>  <br>__afl_forkserver:<br>  /* Enter the fork server mode to avoid the overhead of execve() calls. We<br>     push rdx (area ptr) twice to keep stack alignment neat. */<br><br>  pushq %rdx<br>  pushq %rdx						<br><br>  /* Phone home and tell the parent that we're OK. (Note that signals with<br>     no SA_RESTART will mess it up). If this fails, assume that the fd is<br>     closed because we were execve()d from an instrumented binary, or because<br>     the parent doesn't want to use the fork server. */<br><br>  movq $4, %rdx               /* length    */<br>  leaq __afl_temp(%rip), %rsi /* data      */<br>  movq $(198 + 1), %rdi       /* file desc */<br>call write@PLT						# 调用write(198, __afl_temp, 4)<br><br>  cmpq $4, %rax						# 返回值保存到%rax中，如果%rax == 4，表明写入成功<br>  jne  __afl_fork_resume			# 如果通信失败，则跳转到__afl_fork_resume<br><br>__afl_fork_wait_loop:<br><br>  /* Wait for parent by reading from the pipe. Abort if read fails. */<br><br>  movq $4, %rdx               /* length    */<br>  leaq __afl_temp(%rip), %rsi /* data      */<br>  movq $198, %rdi             /* file desc */<br>call read@PLT						# 调用read(198, __afl_temp, 4)<br>  cmpq $4, %rax						# 返回值保存到%rax中，如果%rax == 4，表明读入成功<br>  jne  __afl_die					# 否则跳转到__afl_die中<br><br>  /* Once woken up, create a clone of our process. This is an excellent use<br>     case for syscall(__NR_clone, 0, CLONE_PARENT), but glibc boneheadedly<br>     caches getpid() results and offers no way to update the value, breaking<br>     abort(), raise(), and a bunch of other things :-( */<br><br>call fork@PLT						# 调用fork()<br>  cmpq $0, %rax						# 判断fork()的返回值 (=0 ==&gt; 子进程， &lt;0 ==&gt; 失败， &gt;0 ==&gt; 在主进程中返回子进程PID)<br>  jl   __afl_die					# 如果&lt;0(失败) 则跳转到__afl_die中<br>  je   __afl_fork_resume			# 如果=0() 位于子进程中，则跳转到__afl_fork_resume<br><br>  /* In parent process: write PID to pipe, then wait for child. */<br><br>  movl %eax, __afl_fork_pid(%rip)	# 【该分支位于父进程中】 %eax为fork()返回的子进程PID值，保存到__afl_fork_pid中<br><br>  movq $4, %rdx                   /* length    */<br>  leaq __afl_fork_pid(%rip), %rsi /* data      */<br>  movq $(198 + 1), %rdi             /* file desc */<br>call write@PLT						# 调用write(199, &amp;__afl_fork_pid, 4);<br><br>  movq $0, %rdx                   /* no flags  */<br>  leaq __afl_temp(%rip), %rsi     /* status    */<br>  movq __afl_fork_pid(%rip), %rdi /* PID       */<br>call waitpid@PLT					# 调用waitpid(__afl_fork_pid, __afl_temp, 0);<br>  cmpq $0, %rax						# waitpid()返回值若≤0，则跳转到__afl_die<br>  jle  __afl_die<br><br>  /* Relay wait status to pipe, then loop back. */<br><br>  movq $4, %rdx               /* length    */<br>  leaq __afl_temp(%rip), %rsi /* data      */<br>  movq $(198 + 1), %rdi         /* file desc */<br>call write@PLT						# 调用write(199, &amp;__afl_temp, 4);<br><br>  jmp  __afl_fork_wait_loop			# 回到循环首<br>  <br>__afl_fork_resume:					# 该分支为子进程操作<br><br>  /* In child process: close fds, resume execution. */<br><br>  movq $198, %rdi<br>call close@PLT						# 调用close(198)<br><br>  movq $(198 + 1), %rdi<br>call close@PLT						# 调用close(199)<br>  # 恢复现场！！<br>  popq %rdx<br>  popq %rdx<br><br>  movq %r12, %rsp<br>  popq %r12<br><br>  movq  0(%rsp), %rax<br>  movq  8(%rsp), %rcx<br>  movq 16(%rsp), %rdi<br>  movq 32(%rsp), %rsi<br>  movq 40(%rsp), %r8<br>  movq 48(%rsp), %r9<br>  movq 56(%rsp), %r10<br>  movq 64(%rsp), %r11<br><br>  movq  96(%rsp), %xmm0<br>  movq 112(%rsp), %xmm1<br>  movq 128(%rsp), %xmm2<br>  movq 144(%rsp), %xmm3<br>  movq 160(%rsp), %xmm4<br>  movq 176(%rsp), %xmm5<br>  movq 192(%rsp), %xmm6<br>  movq 208(%rsp), %xmm7<br>  movq 224(%rsp), %xmm8<br>  movq 240(%rsp), %xmm9<br>  movq 256(%rsp), %xmm10<br>  movq 272(%rsp), %xmm11<br>  movq 288(%rsp), %xmm12<br>  movq 304(%rsp), %xmm13<br>  movq 320(%rsp), %xmm14<br>  movq 336(%rsp), %xmm15<br><br>  leaq 352(%rsp), %rsp<br><br>  jmp  __afl_store  # 跳转到__afl_store去执行边的记录<br><br>__afl_die:<br><br>  xorq %rax, %rax<br>call _exit@PLT		# 调用exit(0)<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li><code>__afl_setup_abort</code>：</li>
+</ul>
+<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><code class="hljs assembly">__afl_setup_abort:<br><br>  /* Record setup failure so that we don't keep calling<br>     shmget() / shmat() over and over again. */<br><br>  incb __afl_setup_failure(%rip)  # __afl_setup_failure++;<br>  # 恢复现场<br>  movq %r12, %rsp<br>  popq %r12<br><br>  movq  0(%rsp), %rax<br>  movq  8(%rsp), %rcx<br>  movq 16(%rsp), %rdi<br>  movq 32(%rsp), %rsi<br>  movq 40(%rsp), %r8<br>  movq 48(%rsp), %r9<br>  movq 56(%rsp), %r10<br>  movq 64(%rsp), %r11<br><br>  movq  96(%rsp), %xmm0<br>  movq 112(%rsp), %xmm1<br>  movq 128(%rsp), %xmm2<br>  movq 144(%rsp), %xmm3<br>  movq 160(%rsp), %xmm4<br>  movq 176(%rsp), %xmm5<br>  movq 192(%rsp), %xmm6<br>  movq 208(%rsp), %xmm7<br>  movq 224(%rsp), %xmm8<br>  movq 240(%rsp), %xmm9<br>  movq 256(%rsp), %xmm10<br>  movq 272(%rsp), %xmm11<br>  movq 288(%rsp), %xmm12<br>  movq 304(%rsp), %xmm13<br>  movq 320(%rsp), %xmm14<br>  movq 336(%rsp), %xmm15<br><br>  leaq 352(%rsp), %rsp<br><br>  jmp __afl_return<br><br></code></pre></td></tr></tbody></table></figure>
+
+<p><code>__afl_maybe_log()</code>伪代码：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br></pre></td><td class="code"><pre><code class="hljs c">__int64* __afl_area_ptr;<br>__int64 __afl_prev_loc;<br><span class="hljs-type">int</span> __afl_fork_pid;<br><span class="hljs-type">int</span> __afl_temp;<br>__int8 __afl_setup_failure;<br>__int64* __afl_global_area_ptr;<br><br><span class="hljs-type">void</span> _afl_maybe_log(__int64 random)<br>{<br>    <br>  __int64 flags;<br>  <span class="hljs-type">void</span>* shmaddr;<br>  <br>  v5 = v4;<br>  v6 = __afl_area_ptr;<br>  <span class="hljs-keyword">if</span> ( !__afl_area_ptr )<br>  {<br>    <span class="hljs-keyword">if</span> ( __afl_setup_failure )<br>      <span class="hljs-keyword">return</span>;<br>    <span class="hljs-keyword">if</span> ( __afl_global_area_ptr )<br>    {<br>      __afl_area_ptr = __afl_global_area_ptr;<br>    }<br>    <span class="hljs-keyword">else</span><br>    {<br>      <span class="hljs-type">char</span>* id = getenv(<span class="hljs-string">"__AFL_SHM_ID"</span>);<br>      <span class="hljs-keyword">if</span> ( !id || __afl_area_ptr = shmat(atoi(id), shmaddr, flags) )<br>      {<br>        __afl_setup_failure++;<br>        <span class="hljs-keyword">return</span>;<br>      }<br>      __afl_global_area_ptr = __afl_area_ptr;<br>      <span class="hljs-keyword">if</span> ( write(<span class="hljs-number">199</span>, &amp;_afl_temp, <span class="hljs-number">4</span>) == <span class="hljs-number">4</span> )<br>      {<br>        <span class="hljs-keyword">while</span> ( <span class="hljs-number">1</span> )<br>        {<br>          <span class="hljs-type">int</span> pid = <span class="hljs-number">0</span>;<br>          <span class="hljs-keyword">if</span> ( read(<span class="hljs-number">198</span>, &amp;_afl_temp, <span class="hljs-number">4</span>) != <span class="hljs-number">4</span> )<br>            <span class="hljs-keyword">break</span>;<br>          <span class="hljs-keyword">if</span> ( __afl_fork_pid = fork() &lt; <span class="hljs-number">0</span> )<br>             <span class="hljs-built_in">exit</span>(<span class="hljs-number">0</span>);  					<span class="hljs-comment">// 退出</span><br>          <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ( !__afl_fork_pid ){<br>            <span class="hljs-comment">// 子进程</span><br>            close(<span class="hljs-number">198</span>);  <span class="hljs-comment">// 关闭这两个管道</span><br>      		close(<span class="hljs-number">199</span>);<br>			__afl_area_ptr[random ^ __afl_prev_loc]++;<br>            __afl_prev_loc = random &gt;&gt; <span class="hljs-number">1</span>;<br>            <span class="hljs-keyword">return</span>;<br>          }<span class="hljs-keyword">else</span>{<br>            <span class="hljs-comment">// 父进程（forkserver）</span><br>          	write(<span class="hljs-number">199</span>, &amp;__afl_fork_pid, <span class="hljs-number">4</span>);  <span class="hljs-comment">// 将pid写入管道? 作用是啥?</span><br>          	<span class="hljs-keyword">if</span> ( waitpid(__afl_fork_pid, &amp;__afl_temp, <span class="hljs-number">0</span>) &lt;= <span class="hljs-number">0</span> )<br>            	<span class="hljs-built_in">exit</span>(<span class="hljs-number">0</span>);  					<span class="hljs-comment">// 退出</span><br>          	write(<span class="hljs-number">199</span>, &amp;__afl_temp, <span class="hljs-number">4</span>);     <span class="hljs-comment">// 这里将__afl_temp写回有什么用？</span><br>          }<br>        }<br>      }<br>    }<br>  }<span class="hljs-keyword">else</span>{<br>      __afl_area_ptr[random ^ __afl_prev_loc]++;<br>      __afl_prev_loc = random &gt;&gt; <span class="hljs-number">1</span>;<br>  }<br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<p><span class="github-emoji"><span>🤔</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f914.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 上述插桩残留一个问题：</p>
+<p>​		父进程的主要作用是维持一个<code>fork-server</code>，那它与AFL之间通过一个管道进行通信，但通信的具体细节是啥呢？</p>
+<h4 id="4-与AFL通信"><a href="#4-与AFL通信" class="headerlink" title="4. 与AFL通信"></a>4. 与AFL通信</h4><ul>
+<li><p>在AFL中，<code>afl-fuzz</code>中<code>init_forkserver()</code>是初始化forkserver的函数：</p>
+<ul>
+<li>在该函数中，<code>afl-fuzz</code>会<code>fork</code>出一个子进程，并为管道分配新的fd（198 ==&gt; 控制管道<code>ctl_pipe[0]</code>，199 ==&gt; 状态管道<code>st_pipe[0]</code>）。而这个子进程<code>execv</code>一个被测程序，这个被测程序（i.e. fork-server）在调用第一个<code>__afl_maybe_log()</code>函数时，首先会向状态管道写入4字节的任意数据，然后将在while循环中的第一个<code>read(198, &amp;_afl_temp, 4)</code>处阻塞，等待<code>AFL-fuzzer</code>发来信息；</li>
+<li>而在<code>afl-fuzz</code>父进程中，通过读取状态管道4字节的数据来判断是否成功启用<code>fork-server</code></li>
+</ul>
+</li>
+<li><p>在AFL中，<code>run_target()</code>将通知<code>fork-server</code>出一个新的子进程来跑模糊测试生成的测试用例：</p>
+<ul>
+<li><code>afl-fuzz</code>进程将4个字节的超时时间写入到控制管道</li>
+<li><code>fork-server</code>在读取到4个字节（0）之后，将停止阻塞。然后<code>fork()</code>出一个新的子进程来跑实际的被测目标，<code>pid</code>将通过状态管道送回给<code>afl-fuzzer</code>，然后收集覆盖率信息。这里<code>fork-server</code>将这读入的四字节0用于<code>waitpid()</code>的第二个参数，然后等待子进程执行完毕。子进程执行完毕之后，<code>fork-server</code>再向状态管道写入4字节，表明被测程序执行完毕</li>
+<li><code>afl-fuzz</code>根据<code>fork</code>出来的被测程序<code>pid</code>的结束信号和覆盖率信息做进一步的分析处理</li>
+</ul>
+</li>
+<li><p>流程图如下所示。其中 ①→②→③ 为创建<code>fork-server</code>的过程，④→⑤→⑥→⑦→⑧→⑨ 为一次完整的<code>run_target()</code>的过程。</p>
+</li>
+</ul>
+<p><img src="/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/13.png" srcset="/img/loading.gif" lazyload></p>
+<center name="pic13">图13 AFL与fork-server通信流程图</center>
+
+<h3 id="b-基于LLVM的插桩"><a href="#b-基于LLVM的插桩" class="headerlink" title="b. 基于LLVM的插桩"></a>b. 基于LLVM的插桩</h3><ul>
+<li>afl-clang-fast、afl-clang-fast++</li>
+<li>基于LLVM <strong>Pass</strong>实现</li>
+</ul>
+<h4 id="1-afl-clang-fast-c"><a href="#1-afl-clang-fast-c" class="headerlink" title="1. afl-clang-fast.c"></a>1. afl-clang-fast.c</h4><ul>
+<li><p>是clang和clang++的一个wrapper，根据具体调用的afl-clang-fast(++)来区分</p>
+<ul>
+<li>afl-clang-fast++是afl-clang-fast的一个软链接，如下所示：</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ ll afl-clang-fast afl-clang-fast++<br>-rwxrwxr-x 1 chan chan 24608 Nov 28 18:36 afl-clang-fast*<br>lrwxrwxrwx 1 chan chan    14 Nov 28 18:36 afl-clang-fast++ -&gt; afl-clang-fast*<br></code></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>与<strong>llvm Pass</strong>（<code>afl-llvm-pass.so</code>）结合使用：使用<code>-Xclang</code>让clang运行用户自定义的<strong>Pass</strong></p>
+<ul>
+<li>与<code>afl-gcc</code>的区别：Pass在<strong>编译器运行时</strong>进行插桩，而<code>afl-gcc</code>对<strong>编译器运行结束后</strong>生成的汇编文件进行插桩</li>
+</ul>
+</li>
+<li><p><strong>源码解析</strong>：</p>
+<ul>
+<li><p><code>find_obj()</code>：寻找<code>afl-llvm-rt.o</code>目标文件，并将AFL路径保存到<code>obj_path</code>变量中</p>
+</li>
+<li><p><code>edit_params()</code>：构造新的编译命令行选项<code>cc_params</code>，将<code>argv</code>中的选项拷贝到<code>cc_params</code>中，同时提供一些必要的编辑：</p>
+<ul>
+<li><p>首先对<code>argv[0]</code>进行匹配，即进行分流：</p>
+<p><code>afl-clang-fast++</code> =&gt; <code>clang++</code></p>
+<p><code>afl-clang-fast</code> =&gt; <code>clang</code></p>
+</li>
+<li><p>如果使用<code>trace_pc</code>模式，则在<code>cc_params</code>后追加<code>-fsanitize-coverage=trace-pc-guard</code>；否则追加两个选项：<code>-Xclang -load</code>（加载包含插件注册表的动态库）和<code>-Xclang obj_path/afl-llvm-pass.so</code>。此外，还要额外追加一个<code>-Qunused-arguments</code> [20] 选项来静默关于未使用参数的警告。</p>
+</li>
+<li><p>将<code>argv[]</code>中其他的选项拷贝到<code>cc_params</code>，在此期间将更新一些变量值</p>
+</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>选项</th>
+<th>变量</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>-m32、armv7a-linux-androideabi</td>
+<td>bit_mode = 32</td>
+</tr>
+<tr>
+<td>-m64</td>
+<td>bit_mode = 64</td>
+</tr>
+<tr>
+<td>-x &lt;language&gt; (将输入文件试为某一语言的文件)</td>
+<td>x_set = 1 ==&gt; “-x none”</td>
+</tr>
+<tr>
+<td>-fsanitize=address、-fsanitize=memory</td>
+<td>asan_set = 1</td>
+</tr>
+<tr>
+<td>FORTIFY_SOURCE</td>
+<td>fortify_set = 1</td>
+</tr>
+<tr>
+<td>-Wl,-z,defs</td>
+<td>不追加到<code>cc_params</code>中</td>
+</tr>
+<tr>
+<td>-Wl,–no-undefined</td>
+<td>不追加到<code>cc_params</code>中</td>
+</tr>
+</tbody></table>
+<ul>
+<li>后面追加的一些选项与<code>afl-gcc</code>相似，不再赘述。这里需要注意的是，如果使用了<code>trace pc</code>模式，<code>AFL_INST_RATIO</code>将不可使用。<code>afl-clang-fast</code>使用<code>-D</code>选项向<code>cc_params</code>追加了一些隐式的<code>#define</code>，分别是：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>__AFL_HAVE_MANUAL_CONTROL=1</td>
+</tr>
+<tr>
+<td>__AFL_COMPILER=1</td>
+</tr>
+<tr>
+<td>FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION=1</td>
+</tr>
+<tr>
+<td>__AFL_LOOP(_A)=({ static volatile char *_B __attribute__((used)); _B = (char*) “##SIG_AFL_PERSISTENT##”; __attribute__((visibility("default"))) int _L(unsigned int) __asm__("__afl_persistent_loop"); _L(_A); })</td>
+</tr>
+<tr>
+<td>__AFL_INIT()=do  { static volatile char *_A __attribute__((used));   _A = (char*) “##SIG_AFL_DEFER_FORKSRV##”; __attribute__((visibility("default")))  void _I(void) __asm__("__afl_manual_init"); _I(); } while (0)</td>
+</tr>
+</tbody></table>
+<ul>
+<li>最后，根据<code>bit_mode</code>向<code>cc_params</code>后追加对应的目标文件 [ 默认为 <code>afl-llvm-rt.o</code>，32位 <code>afl-llvm-rt-32.o</code>，64位 <code>afl-llvm-rt-64.o</code> ]</li>
+</ul>
+</li>
+<li><p><code>execvp()</code>：执行构造的命令行，即<code>cc_params</code>。该命令行通过<code>-Xclang</code>运行<strong>Pass</strong>，然后将<code>afl-llvm-rt.o</code>目标文件链接到最终生成的<code>afl-clang-fast</code>。</p>
+<p><span class="github-emoji"><span>🤔</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f914.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 这里有个问题，<code>afl-llvm-pass.so.cc</code>的作用显而易见，就是构造执行<strong>Pass</strong>插桩的动态链接库，但目标文件<code>afl-llvm-rt.o</code>的作用是什么呢？</p>
+</li>
+</ul>
+</li>
+</ul>
+<h4 id="2-afl-llvm-pass-so-cc"><a href="#2-afl-llvm-pass-so-cc" class="headerlink" title="2. afl-llvm-pass.so.cc"></a>2. afl-llvm-pass.so.cc</h4><ul>
+<li><p>生成执行插桩<strong>Pass</strong>的动态链接库</p>
+</li>
+<li><p><code>AFLCoverage::runOnModule</code>：用于执行转换（插桩）</p>
+<p><span class="github-emoji"><span>1⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 创建两个全局变量：</p>
+<p><code>__afl_area_ptr</code> 用于保存共享内存区域的地址；<code>__afl_prev_loc</code>用于存放前一个基本块ID右移一位的值</p>
+<p><span class="github-emoji"><span>2⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 遍历所有基本块BB：</p>
+<ul>
+<li>随机生成一个基本块ID值<code>cur_loc</code></li>
+<li>载入全局变量<code>__afl_prev_loc</code></li>
+<li>载入全局共享内存区域指针<code>__afl_area_ptr</code>，计算值<code>cur_loc xor __afl_prev_loc</code></li>
+<li>更新比特位图：将上述计算值作为索引，在<code>__afl_area_ptr</code>中寻址，让对应的字节值+1</li>
+<li>更新<code>__afl_prev_loc</code>的值：<code>__afl_prev_loc = cur_loc &gt;&gt; 1</code></li>
+</ul>
+</li>
+<li><p><code>registerAFLPass</code>用来注册该<strong>AFLCoverage Pass</strong>类</p>
+</li>
+</ul>
+<h4 id="3-afl-llvm-rt-o-c"><a href="#3-afl-llvm-rt-o-c" class="headerlink" title="3. afl-llvm-rt.o.c"></a>3. afl-llvm-rt.o.c</h4><ul>
+<li><p>该文件的主要作用有：</p>
+<p><span class="github-emoji"><span>1⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 在被测目标程序执行之前调用<code>__afl_auto_init()</code>初始化函数：</p>
+<ul>
+<li>使用<code>__attribute__((constructor(CONST_PRIO)))</code>关键字，让该函数在被测目标程序调用<code>main()</code>函数之前执行 [21]</li>
+<li>调用<code>__afl_manual_init()</code>函数：<ul>
+<li><code>__afl_map_shm()</code>函数用来获取共享内存区域地址</li>
+<li><code>__afl_start_forkserver()</code>函数用来启动<code>fork-server</code>，其整体逻辑与<a href="#pic13">图13</a>一样，此处不再赘述【注：这里是死循环，用来<code>fork</code>子进程】</li>
+</ul>
+</li>
+</ul>
+<p><span class="github-emoji"><span>2⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <strong>Persistent mode</strong></p>
+<ul>
+<li><p>在源文件中设置<code>__AFL_LOOP(int)</code>后启用</p>
+</li>
+<li><p>如前所述，<code>afl-clang-fast</code>在编译目标程序时，会使用<code>-D</code>选项引入一个<code>#define __AFL_LOOP(_A)</code>的宏定义，该宏定义会将源代码中的<code>__AFL_LOOP(int)</code>替换为<code>__afl_persistent_loop(int)</code>【通常<code>__AFL_LOOP()</code>与<code>while()</code>结合使用】</p>
+</li>
+<li><p><code>int __afl_persistent_loop(unsigned int max_cnt)</code>：</p>
+<ul>
+<li>在第一次调用该函数时，该函数会清空<code>__afl_area_ptr</code>的值，即清空覆盖率跟踪位图信息（在达到<code>__AFL_LOOP()</code>之前的所有覆盖率信息都将被清空），然后将<code>__afl_area_ptr[0]</code>置为1，<code>__afl_prev_loc</code>置为0</li>
+<li>在非第一次调用该函数时（如与<code>while()</code>循环一起使用时），说明前一轮的覆盖率信息已经统计完成，在轮数不为0的情况下，首先<code>raise(SIGSTOP)</code>，表示程序暂停，然后<code>fork-server</code>的<code>waitpid</code>将直接返回，程序仍在运行中，然后该覆盖率信息将被AFL处理，同时生成下一个测试用例投喂给目标程序</li>
+<li><code>fork-server</code>再接收到AFL生成了新的测试用例并需要运行目标程序的消息之后，由于先前的程序处于暂停状态，<code>fork-server</code>将不会<code>fork()</code>一个新的子进程，而是向之前暂停的子进程发送<code>SIGCONT</code>（继续运行）的信号，然后又回到上一步的循环中，直到循环次数结束</li>
+<li>循环次数结束后，<code>__afl_area_ptr</code>会重定向到一个虚假的位图<code>__afl_area_initial</code>中，避免收集<code>__AFL_LOOP()</code>后面执行的代码覆盖率</li>
+</ul>
+</li>
+<li><p>代码：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-keyword">while</span>(__AFL_LOOP(<span class="hljs-number">1000</span>)) {<br>   	<span class="hljs-comment">// AFL只会统计该循环中的代码覆盖率</span><br>    <span class="hljs-comment">// 优点：速度快，避免频繁的调用程序的初始化操作；</span><br>    <span class="hljs-comment">//      能够通过一定数量输入的投喂使得程序到达某一状态，因此可以覆盖到更深层次的代码（这对于网络程序来说具有奇效）</span><br>}<br></code></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>流程图：</p>
+<p><img src="/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/14.png" srcset="/img/loading.gif" lazyload></p>
+<center>图14 persistent mode流程图</center></li>
+</ul>
+<p><span class="github-emoji"><span>3⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0033-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <strong>Deferred forkserver模式</strong>：</p>
+<ul>
+<li><p>由环境变量<code>__AFL_DEFER_FORKSRV</code>控制，用于控制在何时启动forkserver，避免一些长时间的初始化操作影响吞吐量</p>
+</li>
+<li><pre><code class="c">__AFL_INIT(); // the forkserver will be raised here!
+
+// do something ...
+</code></pre>
+</li>
+</ul>
+<p><span class="github-emoji"><span>4⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0034-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <strong>trace_pc_guard模式</strong>：</p>
+<ul>
+<li><p>trace_pc_guard模式对所有的边进行插桩，插桩值为guard</p>
+</li>
+<li><p><code>__sanitizer_cov_trace_pc_guard_init(start, stop)</code>：</p>
+<ul>
+<li>替换每个<code>trace_pc</code>处的<code>guard</code>值（随机数），不进行插桩的<code>guard</code>值设置为0</li>
+</ul>
+</li>
+<li><p><code>__sanitizer_cov_trace_pc_guard(guard)</code>：</p>
+<ul>
+<li>更新共享内存数据：对比特位图中索引为<code>guard</code>的字节+1</li>
+</ul>
+</li>
+</ul>
+<p>trace_pc_guard编译过程中遇到的问题：</p>
+<ol>
+<li><p>makefile 中定义 <code>AFL_TRACE_PC = 1</code></p>
+</li>
+<li><p>如果输出如下显示，则将afl-clang-fast.c 的第133行替换为：<code>c_params[cc_par_cnt++] = "-sanitizer-coverage-level=0";</code> </p>
+<blockquote>
+<p>clang (LLVM option parsing): Unknown command line argument ‘-sanitizer-coverage-block-threshold=0’.  Try: ‘clang (LLVM option parsing) -help’<br>clang (LLVM option parsing): Did you mean ‘-sanitizer-coverage-pc-table=0’?</p>
+</blockquote>
+</li>
+</ol>
+</li>
+</ul>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a><strong>Reference</strong></h2><ol>
+<li><p><a target="_blank" rel="noopener" href="https://en.wikibooks.org/wiki/GNU_C_Compiler_Internals/Print_version">GNU C 编译器内部/打印版 - 维基教科书，开放世界的开放书籍 (wikibooks.org)</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/34502255/ast-from-c-code-with-preprocessor-directives">gcc - AST from c code with preprocessor directives - Stack Overflow</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/15800230/how-can-i-dump-an-abstract-syntax-tree-generated-by-gcc-into-a-dot-file">graphviz - How can I dump an abstract syntax tree generated by gcc into a .dot file? - Stack Overflow</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://gcc.gnu.org/onlinedocs/gccint/GIMPLE.html">GIMPLE (GNU Compiler Collection (GCC) Internals)</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://wiki.aalto.fi/pages/viewpage.action?pageId=55374641">GCC GENERIC - Advanced course on compilers - Aalto University Wiki</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_36287943/article/details/105458166">GCC - GIMPLE IR 学习一_zhugl0的博客-CSDN博客_gimple</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://wiki.aalto.fi/pages/viewpage.action?pageId=55375140">GCC RTL - Advanced course on compilers - Aalto University Wiki</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://www.cs.nmsu.edu/~rth/cs/cs271/notes/Compiling.html">CS271: Compiling (nmsu.edu)</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://getting-started-with-llvm-core-libraries-zh-cn.readthedocs.io/zh_CN/latest/ch04.html">第4章 前端 — Getting Started with LLVM Core Libraries 文档 (getting-started-with-llvm-core-libraries-zh-cn.readthedocs.io)</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/14163208/how-to-link-c-object-files-with-ld">linker - How to link C++ object files with ld - Stack Overflow</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://getting-started-with-llvm-core-libraries-zh-cn.readthedocs.io/zh_CN/latest/ch05.html">第5章 LLVM中间表示 — Getting Started with LLVM Core Libraries 文档 (getting-started-with-llvm-core-libraries-zh-cn.readthedocs.io)</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://getting-started-with-llvm-core-libraries-zh-cn.readthedocs.io/zh_CN/latest/ch06.html">第6章 后端 — Getting Started with LLVM Core Libraries 文档 (getting-started-with-llvm-core-libraries-zh-cn.readthedocs.io)</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://discourse.llvm.org/t/llc-view-dag-combine1-dags/1876/5">LLC -view-dag-combine1-dags - Beginners - LLVM Discussion Forums</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_46222091/article/details/104414187">指令调度概念原理介绍_ronnie88597的博客-CSDN博客</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://mudongliang.github.io/2016/05/24/stack-protector.html">GCC Stack Protector options (mudongliang.github.io)</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/24787769/what-are-lfb-lbb-lbe-lvl-loc-in-the-compiler-generated-assembly-code">c - What are .LFB .LBB .LBE .LVL .loc in the compiler generated assembly code - Stack Overflow</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://sourceware.org/binutils/docs-2.18/as/LNS-directives.html#LNS-directives">LNS directives - Using as (sourceware.org)</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://sourceware.org/binutils/docs-2.18/as/Symbol-Names.html">Symbol Names - Using as (sourceware.org)</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/gcc-mirror/gcc/blob/master/gcc/dwarf2out.cc">gcc/gcc at master · gcc-mirror/gcc (github.com)</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://clang.llvm.org/docs/genindex.html">Index — Clang 16.0.0git documentation (llvm.org)</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://gcc.gnu.org/onlinedocs/gcc-6.2.0/gcc/Common-Function-Attributes.html">Common Function Attributes - Using the GNU Compiler Collection (GCC)</a></p>
+</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E6%A8%A1%E7%B3%8A%E6%B5%8B%E8%AF%95/">#模糊测试</a>
+      
+        <a href="/tags/AFL/">#AFL</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>深入浅出AFL插桩</div>
+      <div>http://example.com/2022/12/27/深入浅出剖析AFL插桩/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>bladchan</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年12月27日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/03/09/AFLplusplus%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%98%E5%BC%82%E5%99%A8%E2%80%94%E6%BA%90%E7%A0%81%E7%BB%86%E8%8A%82/" title="AFLplusplus自定义变异器—源码细节">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">AFLplusplus自定义变异器—源码细节</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/09/27/Boofuzz%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" title="Boofuzz源码解析">
+                        <span class="hidden-mobile">Boofuzz源码解析</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Chan</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Powered by Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

@@ -1,0 +1,827 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="bladchan">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="GraphFuzz源码解析 核心代码位于core目录下 graph.hpp为图结构体头文件，主要包含一个结构体NodeLink和一个类TGraph schema.hpp声明了一个类Schema，同时包含ScopeDef、Signature，hash，ScopeTree和TypeTree这五个结构体 harness.cpp为生成的harness文件，该文件调用libfuzzer的接口来实现相关功能">
+<meta property="og:type" content="article">
+<meta property="og:title" content="GraphFuzz源码解析">
+<meta property="og:url" content="http://example.com/2022/07/25/GraphFuzz%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/index.html">
+<meta property="og:site_name" content="chan&#39;s blog">
+<meta property="og:description" content="GraphFuzz源码解析 核心代码位于core目录下 graph.hpp为图结构体头文件，主要包含一个结构体NodeLink和一个类TGraph schema.hpp声明了一个类Schema，同时包含ScopeDef、Signature，hash，ScopeTree和TypeTree这五个结构体 harness.cpp为生成的harness文件，该文件调用libfuzzer的接口来实现相关功能">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/2b50.png?v8">
+<meta property="og:image" content="http://example.com/2022/07/25/GraphFuzz%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/o5.png">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f517.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f914.png?v8">
+<meta property="article:published_time" content="2022-07-25T03:20:55.000Z">
+<meta property="article:modified_time" content="2023-05-01T09:23:34.939Z">
+<meta property="article:author" content="bladchan">
+<meta property="article:tag" content="模糊测试">
+<meta property="article:tag" content="工具">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://github.githubassets.com/images/icons/emoji/unicode/2b50.png?v8">
+  
+  
+  
+  <title>GraphFuzz源码解析 - chan&#39;s blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.4","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.3.0">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+</head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Chan&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/">
+                <i class="iconfont icon-link-fill"></i>
+                <span>友链</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="GraphFuzz源码解析"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-07-25 11:20" pubdate>
+          2022年7月25日 上午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          3.2k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          27 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">GraphFuzz源码解析</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="GraphFuzz源码解析"><a href="#GraphFuzz源码解析" class="headerlink" title="GraphFuzz源码解析"></a>GraphFuzz源码解析</h1><ul>
+<li>核心代码位于<code>core</code>目录下<ul>
+<li><code>graph.hpp</code>为图结构体头文件，主要包含一个结构体<code>NodeLink</code>和一个类<code>TGraph</code></li>
+<li><code>schema.hpp</code>声明了一个类<code>Schema</code>，同时包含<code>ScopeDef</code>、<code>Signature</code>，<code>hash</code>，<code>ScopeTree</code>和<code>TypeTree</code>这五个结构体</li>
+<li><code>harness.cpp</code>为生成的<code>harness</code>文件，该文件调用<code>libfuzzer</code>的接口来实现相关功能</li>
+</ul>
+</li>
+</ul>
+<h2 id="harness-cpp"><a href="#harness-cpp" class="headerlink" title="harness.cpp"></a>harness.cpp</h2><ul>
+<li><p><code>LLVMFuzzerInitialize()</code>：</p>
+<p>该函数为<code>libfuzzer</code>提供的接口，用于进行模糊测试前的初始化操作：</p>
+<ul>
+<li>for循环体内对命令行参数进行解析：</li>
+</ul>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> i = <span class="hljs-number">0</span>; i &lt; *argc; ++i) {<br>    <span class="hljs-comment">// do something to parse cmd line</span><br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<p>共有14个命令行选项：</p>
+<table>
+<thead>
+<tr>
+<th>支持的命令行选项</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>–graphfuzz_debug</td>
+<td>是否启用debug</td>
+</tr>
+<tr>
+<td>–graphfuzz_skip_validation</td>
+<td>是否跳过有效性验证</td>
+</tr>
+<tr>
+<td>–graphfuzz_prune_cache</td>
+<td>是否精简缓存</td>
+</tr>
+<tr>
+<td>–graphfuzz_enable_soft_execution</td>
+<td>是否启用软执行（有点类似于forkserver）</td>
+</tr>
+<tr>
+<td>–graphfuzz_ignore_invalid</td>
+<td>是否忽略无效的模式（默认false）</td>
+</tr>
+<tr>
+<td>–graphfuzz_trace_mutations</td>
+<td>是否跟踪变异，如果启用，则会保存相关日志</td>
+</tr>
+<tr>
+<td>–graphfuzz_catch=</td>
+<td>捕获那些异常信号，值为若干个信号编号，用逗号隔开</td>
+</tr>
+<tr>
+<td>–graphfuzz_scope_max_depth=</td>
+<td>设置最大scope_max_depth，默认值为10</td>
+</tr>
+<tr>
+<td>–graphfuzz_context_mutation_prob=</td>
+<td>对上下文变量进行变异的概率，默认为0.95</td>
+</tr>
+<tr>
+<td>–graphfuzz_max_nodes=</td>
+<td>每个图最大节点数，默认为200</td>
+</tr>
+<tr>
+<td>–graphfuzz_schema=</td>
+<td>模式文件重命名，默认为”schema.json”</td>
+</tr>
+<tr>
+<td>–graphfuzz_mutate_one</td>
+<td>–graphfuzz_mutate_one &lt;seed&gt; &lt;input&gt; &lt;output&gt;<br>在初始化阶段对种子进行一次变异</td>
+</tr>
+<tr>
+<td>–graphfuzz_init_corpus</td>
+<td>–graphfuzz_init_corpus &lt;corpus&gt;<br>初始化种子</td>
+</tr>
+</tbody></table>
+<ul>
+<li><p><code>Schema::FromFile()</code>从<code>schema.json</code>中读取模式文件并保存到<code>Schema *global_schema</code>变量中</p>
+</li>
+<li><p>调用<code>Schema::Validate()</code>函数来验证<code>schema</code>是否有效，主要检查每个类是否包含构造或析构函数</p>
+</li>
+<li><p><code>register_signals()</code>：注册信号，主要为 <code>graphfuzz_catch</code> 变量指定的需要捕获的信号添加句柄函数<code>sig_handler</code>，该函数使用<code>siglongjmp()</code>函数让程序<strong>跳转到先前配置的跳转点</strong></p>
+</li>
+<li><p>对种子/语料库进行变异或初始化操作（二选一）</p>
+</li>
+<li><p><code>global_init(orig_argc, orig_argv)</code>执行<code>fuzz_exec.cpp</code>定义的相关方法，用于对参数进行初始化操作，默认情况下为空</p>
+</li>
+</ul>
+</li>
+</ul>
+<hr>
+<ul>
+<li><code>MutateOne()</code>：<ul>
+<li>调用<code>LLVMFuzzerCustomMutator()</code>对种子进行变异，然后将变异后的信息保存到<code>--graphfuzz_mutate_one</code>指定的output中</li>
+</ul>
+</li>
+</ul>
+<hr>
+<ul>
+<li><p><code>LLVMFuzzerCustomMutator()</code>：</p>
+<p>该函数为<code>libfuzzer</code>提供的接口，用于进行自定义的变异：</p>
+<ul>
+<li><p>首先根据模式构建<code>TGraph</code>变量g，然后g读入种子数据并验证其有效性</p>
+<ul>
+<li>如果读入失败或无法通过有效性验证，则根据种子重新创建一个新的图</li>
+<li>否则，则调用<code>TGraph::Mutate</code>方法进行图变异（十选一）</li>
+</ul>
+</li>
+<li><p>将生成的图序列化为字符串，并将变异后的数据更新回缓冲区</p>
+</li>
+</ul>
+</li>
+</ul>
+<hr>
+<ul>
+<li><p><code>LLVMFuzzerCustomCrossOver()</code>：</p>
+<p>该函数为<code>libfuzzer</code>提供的接口，用于两个种子之间自定义交叉变异</p>
+</li>
+</ul>
+<hr>
+<ul>
+<li><p><span class="github-emoji"><span>⭐</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/2b50.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <code>LLVMFuzzerTestOneInput()</code>：</p>
+<p>该函数为<code>libfuzzer</code>提供的接口，为<code>libfuzzer</code>主模糊测试模块，用于将生成的数据投喂给目标</p>
+<ul>
+<li><p><code>sigsetjmp()</code>函数在<code>LLVMFuzzerTestOneInput()</code>起始处设置跳转点</p>
+</li>
+<li><p>调用<code>shim_init()</code>函数，确保已经获得覆盖信息</p>
+</li>
+<li><p>构建一个<code>TGraph</code>（模板图）的变量g，然后读入生成的数据（是否成功读入），并检验其合法性（是否有构造和析构）</p>
+</li>
+<li><p>调用<code>TGraph</code>类的<code>GetOrderedNodes()</code>方法得到layer递增的节点序列，然后遍历每一个节点：</p>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-type">void</span> *ref[nodes.<span class="hljs-built_in">size</span>()][MAX_CONN]; <span class="hljs-comment">// 生成一个二维指针数组</span><br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>首先载入输入，具体来说：</li>
+</ul>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-type">void</span> *in_ref[n.<span class="hljs-built_in">in_ref_size</span>()];<br><span class="hljs-comment">// ...</span><br>in_ref[i] = ref[n.<span class="hljs-built_in">index</span>()][i]; <span class="hljs-comment">// 将指针值赋值给in_ref[i]，显然默认为0</span><br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>然后调用函数端点，</li>
+</ul>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-built_in">void</span> (*func)(<span class="hljs-type">void</span> **, <span class="hljs-type">void</span> **, <span class="hljs-type">const</span> <span class="hljs-type">char</span> *) = FUZZER_SHIMS[n.<span class="hljs-built_in">type</span>()];<br><span class="hljs-built_in">func</span>(in_ref, out_ref, context); <span class="hljs-comment">// 将in_ref, out_ref和context投喂给端点</span><br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>最后，将输出拷贝到结果中（注：结果在函数端点调用时已经写到out_ref中），</li>
+</ul>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> i = <span class="hljs-number">0</span>; i &lt; n.<span class="hljs-built_in">out_ref_size</span>(); ++i) {<br>    NodeRef r = n.<span class="hljs-built_in">out_ref</span>(i);<br>    ref[r.<span class="hljs-built_in">node_idx</span>()][r.<span class="hljs-built_in">conn_idx</span>()] = out_ref[i]; <span class="hljs-comment">// 如果当前输出作为下一个连接节点的输入，那么更新ref数组</span><br>    <span class="hljs-keyword">if</span> (graphfuzz_debug) {<br>        cout &lt;&lt; <span class="hljs-string">"Got output: "</span> &lt;&lt; i &lt;&lt; <span class="hljs-string">" :: "</span> &lt;&lt; out_ref[i] &lt;&lt; endl;<br>    }<br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2022/07/25/GraphFuzz%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/o5.png" srcset="/img/loading.gif" lazyload></p>
+</li>
+<li><p>调用<code>shim_finalize()</code></p>
+</li>
+</ul>
+</li>
+</ul>
+<hr>
+<ul>
+<li><code>graphfuzz_try()</code>：<ul>
+<li>用于实现软执行，在主模糊测试流程中未使用</li>
+</ul>
+</li>
+</ul>
+<h2 id="graph-hpp"><a href="#graph-hpp" class="headerlink" title="graph.hpp"></a>graph.hpp</h2><ul>
+<li>该头文件定义了一些图相关的结构体和方法，其中最重要的是<code>Mutate()</code>方法</li>
+</ul>
+<hr>
+<ul>
+<li><p><code>Mutate()</code>：</p>
+<p>调用链<span class="github-emoji"><span>🔗</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f517.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> – <strong>harness.cpp</strong>：<code>MutateOne()</code> $\rightarrow$ <code>LLVMFuzzerCustomMutator()</code> $\rightarrow$ <code>TGraph::Mutate()</code></p>
+<p>分为两类变异：</p>
+<ul>
+<li>上下文变异<code>MutateContext()</code>【概率：默认为0.95】</li>
+<li>基于图变异（九选一）【具体详见论文】：</li>
+</ul>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-keyword">switch</span> (mut_choice) {<br>    <span class="hljs-keyword">case</span> <span class="hljs-number">0</span>: <span class="hljs-built_in">MutateCrosslink</span>(); <span class="hljs-keyword">break</span>;<br>    <span class="hljs-keyword">case</span> <span class="hljs-number">1</span>: <span class="hljs-built_in">MutateTruncateDestructor</span>(); <span class="hljs-keyword">break</span>;<br>    <span class="hljs-keyword">case</span> <span class="hljs-number">2</span>: <span class="hljs-built_in">MutateTruncateConstructor</span>(); <span class="hljs-keyword">break</span>;<br>    <span class="hljs-keyword">case</span> <span class="hljs-number">3</span>: <span class="hljs-built_in">MutateLayerIndex</span>(); <span class="hljs-keyword">break</span>;<br>    <span class="hljs-keyword">case</span> <span class="hljs-number">4</span>: <span class="hljs-built_in">MutateSwapEquivalent</span>(); <span class="hljs-keyword">break</span>;<br>    <span class="hljs-keyword">case</span> <span class="hljs-number">5</span>: <span class="hljs-built_in">MutateExtendDestructor</span>(); <span class="hljs-keyword">break</span>;<br>    <span class="hljs-keyword">case</span> <span class="hljs-number">6</span>: <span class="hljs-built_in">MutateExtendConstructor</span>(); <span class="hljs-keyword">break</span>;<br>    <span class="hljs-keyword">case</span> <span class="hljs-number">7</span>: <span class="hljs-built_in">MutateSpliceIn</span>(); <span class="hljs-keyword">break</span>;<br>    <span class="hljs-keyword">case</span> <span class="hljs-number">8</span>: <span class="hljs-built_in">MutateSpliceOut</span>(); <span class="hljs-keyword">break</span>;<br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<p><span class="github-emoji"><span>🤔</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f914.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 存在问题：变异方法调度仅使用概率，可能存在某种harness序列上下文过度变异【同时可能会导致图变异饿死】或者上下文变异不足【导致bug遗漏，可能会在后面图变异生成相同的变异模式（或类似的变异模式？）】</p>
+</li>
+</ul>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E6%A8%A1%E7%B3%8A%E6%B5%8B%E8%AF%95/">#模糊测试</a>
+      
+        <a href="/tags/%E5%B7%A5%E5%85%B7/">#工具</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>GraphFuzz源码解析</div>
+      <div>http://example.com/2022/07/25/GraphFuzz源码解析/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>bladchan</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年7月25日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/09/27/Boofuzz%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" title="Boofuzz源码解析">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">Boofuzz源码解析</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/07/06/AFLplusplus%E6%BA%90%E7%A0%81%E6%B5%85%E6%9E%90/" title="AFL++源码浅析">
+                        <span class="hidden-mobile">AFL++源码浅析</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Chan</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Powered by Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

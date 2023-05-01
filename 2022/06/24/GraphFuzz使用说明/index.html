@@ -1,0 +1,1132 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="bladchan">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="GraphFuzz使用说明1. 概述 GraphFuzz是一个用于构建结构感知、库API模糊器的实验性框架  论文： 《GraphFuzz: Library API Fuzzing with Lifetime-aware Dataflow Graphs》  GraphFuzz包含：  gfuzz：命令行工具用来合成harness libgraphfuzz：一个运行时图变异引擎   文档：hgarr">
+<meta property="og:type" content="article">
+<meta property="og:title" content="GraphFuzz使用说明">
+<meta property="og:url" content="http://example.com/2022/06/24/GraphFuzz%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E/index.html">
+<meta property="og:site_name" content="chan&#39;s blog">
+<meta property="og:description" content="GraphFuzz使用说明1. 概述 GraphFuzz是一个用于构建结构感知、库API模糊器的实验性框架  论文： 《GraphFuzz: Library API Fuzzing with Lifetime-aware Dataflow Graphs》  GraphFuzz包含：  gfuzz：命令行工具用来合成harness libgraphfuzz：一个运行时图变异引擎   文档：hgarr">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/2022/06/24/GraphFuzz%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E/o1.png">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
+<meta property="og:image" content="http://example.com/2022/06/24/GraphFuzz%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E/o2.png">
+<meta property="og:image" content="http://example.com/2022/06/24/GraphFuzz%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E/o3.png">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f4d3.png?v8">
+<meta property="og:image" content="http://example.com/2022/06/24/GraphFuzz%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E/o4.png">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f44f.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f44f.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f44f.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0033-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0034-20e3.png?v8">
+<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/2b50.png?v8">
+<meta property="article:published_time" content="2022-06-24T08:03:54.000Z">
+<meta property="article:modified_time" content="2023-05-01T09:44:07.568Z">
+<meta property="article:author" content="bladchan">
+<meta property="article:tag" content="模糊测试">
+<meta property="article:tag" content="工具">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://example.com/2022/06/24/GraphFuzz%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E/o1.png">
+  
+  
+  
+  <title>GraphFuzz使用说明 - chan&#39;s blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.4","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.3.0">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+</head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Chan&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/">
+                <i class="iconfont icon-link-fill"></i>
+                <span>友链</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="GraphFuzz使用说明"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-06-24 16:03" pubdate>
+          2022年6月24日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          14k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          115 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">GraphFuzz使用说明</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="GraphFuzz使用说明"><a href="#GraphFuzz使用说明" class="headerlink" title="GraphFuzz使用说明"></a>GraphFuzz使用说明</h1><h2 id="1-概述"><a href="#1-概述" class="headerlink" title="1. 概述"></a>1. 概述</h2><ul>
+<li><p>GraphFuzz是一个用于构建结构感知、库API模糊器的实验性框架</p>
+</li>
+<li><p>论文：</p>
+<p>《GraphFuzz: Library API Fuzzing with Lifetime-aware Dataflow Graphs》</p>
+</li>
+<li><p>GraphFuzz包含：</p>
+<ul>
+<li><code>gfuzz</code>：命令行工具用来合成harness</li>
+<li><code>libgraphfuzz</code>：一个运行时图变异引擎</li>
+</ul>
+</li>
+<li><p>文档：<a target="_blank" rel="noopener" href="https://hgarrereyn.github.io/GraphFuzz">hgarrereyn.github.io/GraphFuzz</a></p>
+</li>
+</ul>
+<h2 id="2-工作流程"><a href="#2-工作流程" class="headerlink" title="2. 工作流程"></a>2. 工作流程</h2><ul>
+<li><p>需要创建一个模式（**<code>schema</code>**）来描述目标库API</p>
+</li>
+<li><p>模式使用人可读的TAML格式编写，并包含一系列需要进行模糊测试的函数、类和结构体</p>
+<hr>
+<p><strong>schema.yaml</strong>：</p>
+<figure class="highlight yaml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-attr">Foo:</span><br>    <span class="hljs-attr">methods:</span><br>    <span class="hljs-bullet">-</span> <span class="hljs-string">Foo()</span><br>    <span class="hljs-bullet">-</span> <span class="hljs-string">~Foo()</span><br>    <span class="hljs-bullet">-</span> <span class="hljs-string">void</span> <span class="hljs-string">foo(int</span> <span class="hljs-string">x,</span> <span class="hljs-string">int</span> <span class="hljs-string">y,</span> <span class="hljs-string">float</span> <span class="hljs-string">z)</span><br><span class="hljs-attr">Bar:</span><br>    <span class="hljs-attr">methods:</span><br>    <span class="hljs-bullet">-</span> <span class="hljs-string">Bar(Foo</span> <span class="hljs-string">*,</span> <span class="hljs-string">int)</span><br>    <span class="hljs-bullet">-</span> <span class="hljs-string">~Bar()</span><br>    <span class="hljs-bullet">-</span> <span class="hljs-string">void</span> <span class="hljs-string">bar(int</span> <span class="hljs-string">x)</span><br></code></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>在运行时，GraphFuzz将使用不同顺序和不同的参数调用库的API以生成测试用例。最重要的是，GraphFuzz将明确跟踪目标的生命周期，并确保所有测试用例都遵守由模式定义的API规范</p>
+<figure class="highlight c++"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><code class="hljs c++">{ <span class="hljs-comment">// Example 1</span><br>    Foo *v0 = <span class="hljs-keyword">new</span> <span class="hljs-built_in">Foo</span>();<br>    v0-&gt;<span class="hljs-built_in">foo</span>(<span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">0.5</span>);<br>    Bar *v1 = <span class="hljs-keyword">new</span> <span class="hljs-built_in">Bar</span>(v0, <span class="hljs-number">1000</span>);<br>    v1-&gt;<span class="hljs-built_in">bar</span>(<span class="hljs-number">123</span>);<br>    del v1;<br>    del v0;<br>}<br>{ <span class="hljs-comment">// Example 2</span><br>    Foo *v0 = <span class="hljs-keyword">new</span> <span class="hljs-built_in">Foo</span>();<br>    v0-&gt;<span class="hljs-built_in">foo</span>(<span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">0.5</span>);<br>    v0-&gt;<span class="hljs-built_in">foo</span>(<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0.5</span>);<br>    v0-&gt;<span class="hljs-built_in">foo</span>(<span class="hljs-number">0</span>, <span class="hljs-number">4</span>, <span class="hljs-number">0.5</span>);<br>    del v0;<br>}<br>{ <span class="hljs-comment">// Example 3</span><br>    Foo *v0 = <span class="hljs-keyword">new</span> <span class="hljs-built_in">Foo</span>();<br>    v0-&gt;<span class="hljs-built_in">foo</span>(<span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">0.5</span>);<br>    Bar *v1 = <span class="hljs-keyword">new</span> <span class="hljs-built_in">Bar</span>(v0, <span class="hljs-number">1000</span>);<br>    Bar *v2 = <span class="hljs-keyword">new</span> <span class="hljs-built_in">Bar</span>(v0, <span class="hljs-number">0</span>);<br>    del v2;<br>    del v1;<br>    del v0;<br>}<br></code></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>上述的测试用例将表示为C++源代码。但在GraphFuzz内部，每个测试用例表示为一个<span style="background-color:#ffed99;font-weight:bold">数据流图</span>，该数据流图的顶点表示为函数，边表示为对象之间的依赖。通过这种方式，GraphFuzz无需代码分析或重编译便可执行测试用例；相反，它动态遍历每一个图，调用每个顶点的一个端点</p>
+<p><img src="/2022/06/24/GraphFuzz%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E/o1.png" srcset="/img/loading.gif" lazyload></p>
+</li>
+</ul>
+<h2 id="3-安装GraphFuzz"><a href="#3-安装GraphFuzz" class="headerlink" title="3. 安装GraphFuzz"></a>3. 安装GraphFuzz</h2><ul>
+<li>将源码下载到本地，并安装相关依赖：</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ git <span class="hljs-built_in">clone</span> https://github.com/ForAllSecure/GraphFuzz.git<br>$ sudo apt-get install libprotobuf-dev protobuf-compiler python3-venv python3-pip<br>$ curl -sSL https://install.python-poetry.org | python3 -<br>$ <span class="hljs-built_in">export</span> PATH=<span class="hljs-variable">$PATH</span>: ** the root path to poetry ** (e.g. /home/chan/.local/bin)<br></code></pre></td></tr></tbody></table></figure>
+
+<p><span class="github-emoji"><span>1⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <strong>libgraphfuzz：</strong></p>
+<ul>
+<li>libgraphfuzz是链接到你的模糊器harness的一个运行时图变异库，其用C++编写并使用标准的CMake进行构建：</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ <span class="hljs-built_in">cd</span> GraphFuzz<br>$ <span class="hljs-built_in">mkdir</span> build<br>$ <span class="hljs-built_in">cd</span> build<br>$ cmake ..<br>$ make<br>$ sudo make install<br></code></pre></td></tr></tbody></table></figure>
+
+<hr>
+<p><span class="github-emoji"><span>2⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <strong>gfuzz：</strong></p>
+<ul>
+<li>gfuzz是一个python命令行工具，用来构建harness文件并执行各种各样其他的功能（如图最小化）。其使用Python编写，使用Poetry来构建系统：</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ <span class="hljs-built_in">cd</span> .. &amp;&amp; <span class="hljs-built_in">cd</span> cli<br>$ poetry build<br>$ poetry <span class="hljs-built_in">export</span> &gt; dist/requirements.txt<br>$ python3 -m pip install -r dist/requirements.txt<br>$ python3 -m pip install ./dist/gfuzz-*.whl<br></code></pre></td></tr></tbody></table></figure>
+
+<h2 id="4-基本用法"><a href="#4-基本用法" class="headerlink" title="4. 基本用法"></a><span id="basicusage">4. 基本用法</span></h2><ul>
+<li>构建实验测试环境：</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ sudo apt-get install docker-ce docker-ce-cli containerd.io<br>$ <span class="hljs-built_in">cd</span> .. &amp;&amp; <span class="hljs-built_in">cd</span> experiments<br>$ sudo ./build base<br>$ sudo ./build hello_graphfuzz<br>$ sudo ./run hello_graphfuzz<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li><code>hello_graphfuzz</code>是一个简单测试项目，其中包含一个简单的C++目标文件<code>lib.h</code>、一个模式配置文件<code>schema.yaml</code></li>
+<li>一个简单的C++目标文件<code>lib.h</code>：</li>
+</ul>
+<figure class="highlight c++"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;cstring&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;vector&gt;</span></span><br><br><span class="hljs-keyword">class</span> <span class="hljs-title class_">Foo</span> {<br><span class="hljs-keyword">public</span>:<br>    <span class="hljs-built_in">Foo</span>(): <span class="hljs-built_in">buffer</span>(<span class="hljs-number">0</span>) {}<br><br>    <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">write</span><span class="hljs-params">(<span class="hljs-type">char</span> val)</span> </span>{<br>        buffer.<span class="hljs-built_in">push_back</span>(val);<br>    }<br><br>    <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">check</span><span class="hljs-params">()</span> </span>{<br>        <span class="hljs-keyword">if</span> (buffer.<span class="hljs-built_in">size</span>() &gt;= <span class="hljs-number">4</span> &amp;&amp; \<br>            buffer[<span class="hljs-number">0</span>] == <span class="hljs-string">'F'</span> &amp;&amp; \<br>            buffer[<span class="hljs-number">1</span>] == <span class="hljs-string">'U'</span> &amp;&amp; \<br>            buffer[<span class="hljs-number">2</span>] == <span class="hljs-string">'Z'</span> &amp;&amp; \<br>            buffer[<span class="hljs-number">3</span>] == <span class="hljs-string">'Z'</span><br>        ) {<br>            __builtin_trap();<br>        }<br>    }<br><span class="hljs-keyword">private</span>:<br>    std::vector&lt;<span class="hljs-type">char</span>&gt; buffer;<br>};<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>在这个目标中，无法创建使用标准<code>LLVMFuzzerTestOneInput</code>类型的单个函数的harness。但你可以按照如下的方法构造一个事实上的API模糊器：</li>
+</ul>
+<figure class="highlight c++"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">LLVMFuzzerTestOneInput</span><span class="hljs-params">(<span class="hljs-type">const</span> <span class="hljs-type">char</span> *Data, <span class="hljs-type">size_t</span> Size)</span> </span>{<br>    Foo foo;<br>    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> i = <span class="hljs-number">0</span>; i &lt; Size; ++i) {<br>        foo.<span class="hljs-built_in">write</span>(Data[i]);<br>    }<br>    foo.<span class="hljs-built_in">check</span>();<br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li><p>上述类型的harness构造需要一些关于API的域知识，但对模糊器的搜索空间进行了限制。例如，如果一个bug需要在Foo::check之后调用Foo::write或多次调用Foo::check才能触发，那该如何操作？因此上述<span style="background-color:#ffed99;font-weight:bold">基于标准<code>LLVMFuzzerTestOneInput</code>存在局限性</span>，主要的问题是其调用序列不变，因此不能触发更深层次的漏洞。随着API surface的扩大，函数的交互方式也呈指数级增加，生成这些“事实上”的harness变得更加困难。</p>
+</li>
+<li><p>在GraphFuzz中，一个驱动见解是使模糊器引擎根据覆盖率引导变异自行发现<span style="background-color:#ffed99;font-weight:bold">API使用模式</span>：通过定义一个模式，描述我们想要模糊测试的所有API端点，让模糊器构建测试用例。</p>
+</li>
+<li><p>schema.yaml：</p>
+</li>
+</ul>
+<figure class="highlight yaml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-attr">Foo:</span><br>  <span class="hljs-attr">type:</span> <span class="hljs-string">struct</span><br>  <span class="hljs-attr">name:</span> <span class="hljs-string">Foo</span><br>  <span class="hljs-attr">headers:</span> [<span class="hljs-string">lib.h</span>]<br>  <span class="hljs-attr">methods:</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">Foo()</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">~Foo()</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">void</span> <span class="hljs-string">write(char</span> <span class="hljs-string">val)</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">void</span> <span class="hljs-string">check()</span><br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li><p>该模式描述了一个库API中一个对象<code>struct Foo</code>和四个端点：</p>
+<ul>
+<li><p><code>Foo::Foo()</code>（一个构造函数）</p>
+</li>
+<li><p><code>Foo::~Foo()</code> (一个析构函数)</p>
+</li>
+<li><p><code>Foo::write(char)</code></p>
+</li>
+<li><p><code>Foo::check()</code></p>
+</li>
+</ul>
+</li>
+<li><p>在模式中，仅给出函数签名，但GraphFuzz尝试去推断语义（例如，Foo:Foo是一个构造函数而不是一个方法调用）。在大多数情况下，该推断是完美的；但也确实遇到了对参数有隐含约束的函数或非标准的API结构。因此，GraphFuzz也支持一种更粗略、更灵活的端点声明，称为自定义端点。</p>
+</li>
+</ul>
+<hr>
+<ul>
+<li>接下来，我们使用<code>gfuzz</code>工具去合成实际的C++ harness文件：</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs bash"><span class="hljs-comment"># Usage: gfuzz gen [lang] [schema] [output directory]</span><br>$ gfuzz gen cpp schema.yaml .<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>这将会产生3个文件：<ul>
+<li><code>fuzz_exec.cpp</code>：主模糊器harness</li>
+<li><code>fuzz_write.cpp</code>：一个镜像harness，用于将数据流图转化为源代码</li>
+<li><code>schema.json</code>：在运行时被GraphFuzz所使用的类型元数据</li>
+</ul>
+</li>
+</ul>
+<p>:happy: 生成文件内容详见<a href="#fl1">附录</a></p>
+<ul>
+<li>最后，我们编译模糊器harness：</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ clang++ -o fuzz_exec fuzz_exec.cpp -fsanitize=fuzzer -lprotobuf -lgraphfuzz<br></code></pre></td></tr></tbody></table></figure>
+
+<p>注意：GraphFuzz通过hook的方式使用libFuzzer，因此我们可以使用libFuzzer的功能如 <code>user_value_profile</code>, <code>fork</code>, <code>dict</code> 等。</p>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">./fuzz_exec -use_value_profile=1<br></code></pre></td></tr></tbody></table></figure>
+
+<p>运行结果：</p>
+<p><img src="/2022/06/24/GraphFuzz%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E/o2.png" srcset="/img/loading.gif" lazyload></p>
+<ul>
+<li>每个测试用例文件表示一个序列化的数据流图，因此我们查看crash是不可读的：</li>
+</ul>
+<p><img src="/2022/06/24/GraphFuzz%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E/o3.png" srcset="/img/loading.gif" lazyload></p>
+<ul>
+<li>为了使其可读，我们使用<code>fuzz_write</code> harness从图中合成源代码：</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ clang++ -o fuzz_write fuzz_write.cpp -fsanitize=fuzzer -lprotobuf -lgraphfuzz<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>然后运行<code>fuzz_write</code>来合成harness：</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ ./fuzz_write crash-402bbad640a94933571939f685ea1e9dc4b937f8<br></code></pre></td></tr></tbody></table></figure>
+
+<figure class="highlight c++"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">"lib.h"</span></span><br><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> MAKE(t) static_cast<span class="hljs-string">&lt;t *&gt;</span>(calloc(sizeof(t), 1))</span><br><br><span class="hljs-keyword">struct</span> <span class="hljs-title class_">GFUZZ_BUNDLE</span> {<br><span class="hljs-keyword">public</span>:<br>    <span class="hljs-type">void</span> *active;<br>    <span class="hljs-type">void</span> *inactive;<br>    <span class="hljs-built_in">GFUZZ_BUNDLE</span>(<span class="hljs-type">void</span> *_active, <span class="hljs-type">void</span> *_inactive): <span class="hljs-built_in">active</span>(_active), <span class="hljs-built_in">inactive</span>(_inactive) {}<br>};<br><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> BUNDLE(a,b) new GFUZZ_BUNDLE((void *)a, (void *)b)</span><br><br><span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">main</span><span class="hljs-params">()</span> </span>{<br>    Foo *var_0;<br>    { <span class="hljs-comment">// begin shim_0</span><br>        var_0 = <span class="hljs-built_in">MAKE</span>(Foo);<br>        Foo ref = <span class="hljs-built_in">Foo</span>();<br>        *var_0 = ref;<br>    } <span class="hljs-comment">// end shim_0</span><br>    Foo *var_1;<br>    { <span class="hljs-comment">// begin shim_2</span><br>        var_0-&gt;<span class="hljs-built_in">write</span>(<span class="hljs-number">70</span>); <span class="hljs-comment">// ascii 'F'</span><br>        var_1 = var_0;<br>    } <span class="hljs-comment">// end shim_2</span><br>    Foo *var_2;<br>    { <span class="hljs-comment">// begin shim_2</span><br>        var_1-&gt;<span class="hljs-built_in">write</span>(<span class="hljs-number">85</span>); <span class="hljs-comment">// ascii 'U'</span><br>        var_2 = var_1;<br>    } <span class="hljs-comment">// end shim_2</span><br>    Foo *var_3;<br>    { <span class="hljs-comment">// begin shim_2</span><br>        var_2-&gt;<span class="hljs-built_in">write</span>(<span class="hljs-number">90</span>); <span class="hljs-comment">// ascii 'Z'</span><br>        var_3 = var_2;<br>    } <span class="hljs-comment">// end shim_2</span><br>    Foo *var_4;<br>    { <span class="hljs-comment">// begin shim_2</span><br>        var_3-&gt;<span class="hljs-built_in">write</span>(<span class="hljs-number">90</span>); <span class="hljs-comment">// ascii 'Z'</span><br>        var_4 = var_3;<br>    } <span class="hljs-comment">// end shim_2</span><br>    Foo *var_5;<br>    { <span class="hljs-comment">// begin shim_3</span><br>        var_4-&gt;<span class="hljs-built_in">check</span>(); <span class="hljs-comment">// __builtin_trap</span><br>        var_5 = var_4;<br>    } <span class="hljs-comment">// end shim_3</span><br>    Foo *var_6;<br>    { <span class="hljs-comment">// begin shim_2</span><br>        var_5-&gt;<span class="hljs-built_in">write</span>(<span class="hljs-number">5</span>);<br>        var_6 = var_5;<br>    } <span class="hljs-comment">// end shim_2</span><br>    Foo *var_7;<br>    { <span class="hljs-comment">// begin shim_2</span><br>        var_6-&gt;<span class="hljs-built_in">write</span>(<span class="hljs-number">0</span>);<br>        var_7 = var_6;<br>    } <span class="hljs-comment">// end shim_2</span><br>    Foo *var_8;<br>    { <span class="hljs-comment">// begin shim_2</span><br>        var_7-&gt;<span class="hljs-built_in">write</span>(<span class="hljs-number">0</span>);<br>        var_8 = var_7;<br>    } <span class="hljs-comment">// end shim_2</span><br>    Foo *var_9;<br>    { <span class="hljs-comment">// begin shim_3</span><br>        var_8-&gt;<span class="hljs-built_in">check</span>();<br>        var_9 = var_8;<br>    } <span class="hljs-comment">// end shim_3</span><br>    { <span class="hljs-comment">// begin shim_1</span><br>        <span class="hljs-built_in">free</span>(var_9);<br>    } <span class="hljs-comment">// end shim_1</span><br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>该crash在内部仍被表示为数据流图，我们可以使用同样的模糊器概念来进行图感知的最小化</li>
+</ul>
+<blockquote>
+<p><span class="github-emoji"><span>📓</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f4d3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 目前libFuzzer不支持自定义minimize_crash选项，默认情况下会尝试执行字节感知的最小化，因此提供了一个图感知最小化工具作为<code>gfuzz</code>的一部分</p>
+</blockquote>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs bash"><span class="hljs-comment"># Usage: gfuzz min [fuzzer] [crash]</span><br>$ gfuzz min ./fuzz_exec crash-402bbad640a94933571939f685ea1e9dc4b937f8<br></code></pre></td></tr></tbody></table></figure>
+
+<p>运行结果：</p>
+<p><img src="/2022/06/24/GraphFuzz%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E/o4.png" srcset="/img/loading.gif" lazyload></p>
+<ul>
+<li>然后我们查看最小化后的测试用例：</li>
+</ul>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ ./fuzz_write crash-402bbad640a94933571939f685ea1e9dc4b937f8.min<br></code></pre></td></tr></tbody></table></figure>
+
+<figure class="highlight c++"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">"lib.h"</span></span><br><br><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> MAKE(t) static_cast<span class="hljs-string">&lt;t *&gt;</span>(calloc(sizeof(t), 1))</span><br><br><span class="hljs-keyword">struct</span> <span class="hljs-title class_">GFUZZ_BUNDLE</span> {<br><span class="hljs-keyword">public</span>:<br>    <span class="hljs-type">void</span> *active;<br>    <span class="hljs-type">void</span> *inactive;<br>    <span class="hljs-built_in">GFUZZ_BUNDLE</span>(<span class="hljs-type">void</span> *_active, <span class="hljs-type">void</span> *_inactive): <span class="hljs-built_in">active</span>(_active), <span class="hljs-built_in">inactive</span>(_inactive) {}<br>};<br><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> BUNDLE(a,b) new GFUZZ_BUNDLE((void *)a, (void *)b)</span><br><br><span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">main</span><span class="hljs-params">()</span> </span>{<br>    Foo *var_0;<br>    { <span class="hljs-comment">// begin shim_0</span><br>        var_0 = <span class="hljs-built_in">MAKE</span>(Foo);<br>        Foo ref = <span class="hljs-built_in">Foo</span>();<br>        *var_0 = ref;<br>    } <span class="hljs-comment">// end shim_0</span><br>    Foo *var_1;<br>    { <span class="hljs-comment">// begin shim_2</span><br>        var_0-&gt;<span class="hljs-built_in">write</span>(<span class="hljs-number">70</span>); <span class="hljs-comment">// ascii 'F'</span><br>        var_1 = var_0;<br>    } <span class="hljs-comment">// end shim_2</span><br>    Foo *var_2;<br>    { <span class="hljs-comment">// begin shim_2</span><br>        var_1-&gt;<span class="hljs-built_in">write</span>(<span class="hljs-number">85</span>); <span class="hljs-comment">// ascii 'U'</span><br>        var_2 = var_1;<br>    } <span class="hljs-comment">// end shim_2</span><br>    Foo *var_3;<br>    { <span class="hljs-comment">// begin shim_2</span><br>        var_2-&gt;<span class="hljs-built_in">write</span>(<span class="hljs-number">90</span>); <span class="hljs-comment">// ascii 'Z'</span><br>        var_3 = var_2;<br>    } <span class="hljs-comment">// end shim_2</span><br>    Foo *var_4;<br>    { <span class="hljs-comment">// begin shim_2</span><br>        var_3-&gt;<span class="hljs-built_in">write</span>(<span class="hljs-number">90</span>); <span class="hljs-comment">// ascii 'Z'</span><br>        var_4 = var_3;<br>    } <span class="hljs-comment">// end shim_2</span><br>    Foo *var_5;<br>    { <span class="hljs-comment">// begin shim_3</span><br>        var_4-&gt;<span class="hljs-built_in">check</span>(); <span class="hljs-comment">// __builtin_trap</span><br>        var_5 = var_4;<br>    } <span class="hljs-comment">// end shim_3</span><br>    { <span class="hljs-comment">// begin shim_1</span><br>        <span class="hljs-built_in">free</span>(var_5);<br>    } <span class="hljs-comment">// end shim_1</span><br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<p><span class="github-emoji"><span>👏</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f44f.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span><span class="github-emoji"><span>👏</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f44f.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span><span class="github-emoji"><span>👏</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f44f.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 上述结果删除了冗余的代码</p>
+<h2 id="5-端点"><a href="#5-端点" class="headerlink" title="5. 端点"></a>5. 端点</h2><ul>
+<li>端点是一个GraphFuzz harness基本构建块（数据流图的顶点），本节主要探索完整的端点定义语法：</li>
+</ul>
+<figure class="highlight yaml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-attr">Foo:</span><br>    <span class="hljs-string">...</span><br>    <span class="hljs-attr">methods:</span><br>    <span class="hljs-string">...</span><br>    <span class="hljs-comment"># Endpoint name.</span><br>    <span class="hljs-bullet">-</span> <span class="hljs-attr">myEndpoint:</span><br>        <span class="hljs-comment"># List of "live" inputs.</span><br>        <span class="hljs-attr">inputs:</span> [<span class="hljs-string">'Foo'</span>, <span class="hljs-string">'Bar'</span>]<br><br>        <span class="hljs-comment"># List of "live" outputs.</span><br>        <span class="hljs-attr">outputs:</span> [<span class="hljs-string">'Bar'</span>]<br><br>        <span class="hljs-comment"># Additional fuzzable parameters.</span><br>        <span class="hljs-attr">args:</span> [<span class="hljs-string">'int'</span>, <span class="hljs-string">'char[10]'</span>]<br><br>        <span class="hljs-comment"># Endpoint code. (<span class="hljs-doctag">note:</span> "exec: |" is YAML syntax for a multiline string)</span><br>        <span class="hljs-attr">exec:</span> <span class="hljs-string">|</span><br><span class="hljs-string">            // Arbitrary C/C++ code here</span><br><span class="hljs-string">            for (int i = 0; i &lt; 10; ++i) {</span><br><span class="hljs-string">                $a1[i] &amp;= 0x7f;</span><br><span class="hljs-string">            }</span><br><span class="hljs-string">            $i1-&gt;doFunction($i0, $a0, $a1);</span><br><span class="hljs-string">            $o0 = $i1;</span><br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>可以将端点定义抽象为一个代码片段，对用法有一定的要求：</li>
+</ul>
+<figure class="highlight c++"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-comment">// [前提条件:]</span><br><span class="hljs-comment">// $i0 is a live Foo *</span><br><span class="hljs-comment">// $i1 is a live Bar *</span><br><span class="hljs-comment">// $a0 is an int</span><br><span class="hljs-comment">// $a1 is a char[10]</span><br>{<br>    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-number">10</span>; ++i) {<br>        $a1[i] &amp;= <span class="hljs-number">0x7f</span>;<br>    }<br>    $i1-&gt;<span class="hljs-built_in">doFunction</span>($i0, $a0, $a1);<br>    $o0 = $i1;<br>}<br><span class="hljs-comment">// [前提条件:]</span><br><span class="hljs-comment">// $o0 is a live Bar *</span><br></code></pre></td></tr></tbody></table></figure>
+
+<p>注：为了运行此代码，我们需要初始化多个对象，包括实时数据类型。运行此代码后，将剩下一个对象（Bar *），我们需要清理该对象</p>
+<ul>
+<li>模糊测试引擎将通过调用构造必要对象并析构结果对象的其他端点来自动识别如何调用此端点</li>
+</ul>
+<hr>
+<ul>
+<li>在<a href="#basicusage">基本用法</a>中，我们使用以下模式来自动生成完整的端点定义</li>
+</ul>
+<p><strong>schema.yaml：</strong></p>
+<figure class="highlight yaml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-attr">Foo:</span><br>  <span class="hljs-attr">type:</span> <span class="hljs-string">struct</span><br>  <span class="hljs-attr">name:</span> <span class="hljs-string">Foo</span><br>  <span class="hljs-attr">headers:</span> [<span class="hljs-string">lib.h</span>]<br>  <span class="hljs-attr">methods:</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">Foo()</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">~Foo()</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">void</span> <span class="hljs-string">write(char</span> <span class="hljs-string">val)</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">void</span> <span class="hljs-string">check()</span><br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>在内部，GraphFuzz生成了一个完整的模式，如下所示：</li>
+</ul>
+<figure class="highlight yaml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-attr">Foo:</span><br>  <span class="hljs-attr">type:</span> <span class="hljs-string">struct</span><br>  <span class="hljs-attr">name:</span> <span class="hljs-string">Foo</span><br>  <span class="hljs-attr">headers:</span> [<span class="hljs-string">lib.h</span>]<br>  <span class="hljs-attr">methods:</span><br>  <span class="hljs-bullet">-</span> <span class="hljs-string">Foo():</span><br>      <span class="hljs-attr">outputs:</span> [<span class="hljs-string">'Foo'</span>]<br>      <span class="hljs-attr">exec:</span> <span class="hljs-string">|</span><br><span class="hljs-string">        $o0 = new Foo();</span><br><span class="hljs-string"></span>  <span class="hljs-bullet">-</span> <span class="hljs-string">~Foo():</span><br>      <span class="hljs-attr">inputs:</span> [<span class="hljs-string">'Foo'</span>]<br>      <span class="hljs-attr">exec:</span> <span class="hljs-string">|</span><br><span class="hljs-string">        delete $i0;</span><br><span class="hljs-string"></span>  <span class="hljs-bullet">-</span> <span class="hljs-string">void</span> <span class="hljs-string">write(char</span> <span class="hljs-string">val):</span><br>      <span class="hljs-attr">inputs:</span> [<span class="hljs-string">'Foo'</span>]<br>      <span class="hljs-attr">outputs:</span> [<span class="hljs-string">'Foo'</span>]<br>      <span class="hljs-attr">args:</span> [<span class="hljs-string">'char'</span>]<br>      <span class="hljs-attr">exec:</span> <span class="hljs-string">|</span><br><span class="hljs-string">        $i0-&gt;write($a0);</span><br><span class="hljs-string">        $o0 = $i0;</span><br><span class="hljs-string"></span>  <span class="hljs-bullet">-</span> <span class="hljs-string">void</span> <span class="hljs-string">check():</span><br>      <span class="hljs-attr">inputs:</span> [<span class="hljs-string">'Foo'</span>]<br>      <span class="hljs-attr">outputs:</span> [<span class="hljs-string">'Foo'</span>]<br>      <span class="hljs-attr">exec:</span> <span class="hljs-string">|</span><br><span class="hljs-string">        $i0-&gt;check();</span><br><span class="hljs-string">        $o0 = $i0;</span><br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>接下来一一分析端点：</li>
+</ul>
+<p><span class="github-emoji"><span>1⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <strong>Foo::Foo()</strong></p>
+<figure class="highlight yaml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-bullet">-</span> <span class="hljs-string">Foo():</span><br>    <span class="hljs-attr">outputs:</span> [<span class="hljs-string">'Foo'</span>]<br>    <span class="hljs-attr">exec:</span> <span class="hljs-string">|</span><br>        <span class="hljs-string">$o0</span> <span class="hljs-string">=</span> <span class="hljs-string">new</span> <span class="hljs-string">Foo();</span><br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>该端点无输入和上下文参数（直接省略这些字段）。因为该端点是一个构造函数，其产生一个<code>Foo</code>类型的输出。在输出中，我们编写输出对象的类型名称。在<code>exec</code>模板中，我们需要实际调用这个构造函数。因为我们指定了输出，所以我们可以访问模板变量**$o0**（第0个输出），该变量将填充为一个<code>Foo *</code>指针。</li>
+</ul>
+<p><span class="github-emoji"><span>2⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <strong>Foo::~Foo()</strong></p>
+<figure class="highlight yaml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-bullet">-</span> <span class="hljs-string">~Foo():</span><br>    <span class="hljs-attr">inputs:</span> [<span class="hljs-string">'Foo'</span>]<br>    <span class="hljs-attr">exec:</span> <span class="hljs-string">|</span><br>        <span class="hljs-string">delete</span> <span class="hljs-string">$i0;</span><br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>该端点是一个析构函数。为了调用析构函数，我们需要一个对象的实例；因此，我们在<code>inputs</code>数组中指定一个<code>Foo</code>对象。因为我们指定了一个输入，所以我们可以访问模板变量**$i0**（第0个输入），即一个<code>Foo *</code>指针。</li>
+</ul>
+<p><span class="github-emoji"><span>3⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0033-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <strong>Foo::check()</strong></p>
+<figure class="highlight yaml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-bullet">-</span> <span class="hljs-string">void</span> <span class="hljs-string">check():</span><br>    <span class="hljs-attr">inputs:</span> [<span class="hljs-string">'Foo'</span>]<br>    <span class="hljs-attr">outputs:</span> [<span class="hljs-string">'Foo'</span>]<br>    <span class="hljs-attr">exec:</span> <span class="hljs-string">|</span><br><span class="hljs-string">        $i0-&gt;check();</span><br><span class="hljs-string">        $o0 = $i0;</span><br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>该端点是一个方法调用。为了执行一个方法调用，我们需要这个对象的一个实例。在我们执行这个方法调用之后，该对象仍然有效，因此其是一个输出。我们在<code>inputs</code>和<code>outputs</code>中指定<code>Foo</code>对象。在我们执行模板时，我们可以访问<strong>$i0</strong>和<strong>$o0</strong>。当这个端点被调用时，$i0将指向一个有效的<code>Foo</code>对象并由我们负责填充**$o0**</li>
+</ul>
+<p><span class="github-emoji"><span>4⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0034-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <strong>Foo::write(char)</strong></p>
+<figure class="highlight yaml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-bullet">-</span> <span class="hljs-string">void</span> <span class="hljs-string">write(char</span> <span class="hljs-string">val):</span><br>    <span class="hljs-attr">inputs:</span> [<span class="hljs-string">'Foo'</span>]<br>    <span class="hljs-attr">outputs:</span> [<span class="hljs-string">'Foo'</span>]<br>    <span class="hljs-attr">args:</span> [<span class="hljs-string">'char'</span>]<br>    <span class="hljs-attr">exec:</span> <span class="hljs-string">|</span><br><span class="hljs-string">        $i0-&gt;write($a0);</span><br><span class="hljs-string">        $o0 = $i0;</span><br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>和<code>Foo::check()</code>一样，该端点也是一个方法调用。但是，该方法有另外一个参数：一个<code>char</code>变量将传递给我们的端点方法。<code>char</code>是一个基本类型，默认情况下，其不会作为数据流图的一部分进行跟踪。相反，在给定图中的每个端点实例包含一个此参数的单独实例，该实例可以被模糊测试。这些上下文相关的参数被指定在<code>args</code>数组中。这里我们通过模板变量**$a0**（第0个参数）来指向<code>char</code>变量。</li>
+</ul>
+<h2 id="附录"><a href="#附录" class="headerlink" title="附录"></a>附录</h2><h3 id="A-相关源代码"><a href="#A-相关源代码" class="headerlink" title="A. 相关源代码"></a><span id="fl1">A. 相关源代码</span></h3><ul>
+<li><code>fuzz_exec.cpp</code>中核心代码块：</li>
+</ul>
+<figure class="highlight c++"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-comment">/* CPPScope(name=(auto) Foo::Foo();) */</span><br><span class="hljs-keyword">extern</span> <span class="hljs-string">"C"</span> <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">shim_0</span><span class="hljs-params">(<span class="hljs-type">void</span> **in_ref, <span class="hljs-type">void</span> **out_ref, <span class="hljs-type">const</span> <span class="hljs-type">char</span> *context)</span> </span>{<br>    Foo *_o0;<br>    _o0 = <span class="hljs-built_in">MAKE</span>(Foo);<br>    Foo ref = <span class="hljs-built_in">Foo</span>();<br>    *_o0 = ref;<br>    <br>                    <br>    out_ref[<span class="hljs-number">0</span>] = <span class="hljs-built_in">reinterpret_cast</span>&lt;<span class="hljs-type">void</span> *&gt;(_o0);<br>}<br><br><br><span class="hljs-comment">/* CPPScope(name=(auto) Foo::~Foo();) */</span><br><span class="hljs-keyword">extern</span> <span class="hljs-string">"C"</span> <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">shim_1</span><span class="hljs-params">(<span class="hljs-type">void</span> **in_ref, <span class="hljs-type">void</span> **out_ref, <span class="hljs-type">const</span> <span class="hljs-type">char</span> *context)</span> </span>{<br>    Foo *_i0 = <span class="hljs-built_in">reinterpret_cast</span>&lt;Foo *&gt;(in_ref[<span class="hljs-number">0</span>]);<br>    <span class="hljs-built_in">free</span>(_i0);<br>    <br>                    <br>}<br><br><br><span class="hljs-comment">/* CPPScope(name=(auto) Foo::void write(char val);) */</span><br><span class="hljs-keyword">extern</span> <span class="hljs-string">"C"</span> <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">shim_2</span><span class="hljs-params">(<span class="hljs-type">void</span> **in_ref, <span class="hljs-type">void</span> **out_ref, <span class="hljs-type">const</span> <span class="hljs-type">char</span> *context)</span> </span>{<br>    Foo *_i0 = <span class="hljs-built_in">reinterpret_cast</span>&lt;Foo *&gt;(in_ref[<span class="hljs-number">0</span>]);<br>    <span class="hljs-type">char</span> _a0;<br>    <span class="hljs-built_in">memcpy</span>(&amp;_a0, context + <span class="hljs-number">0</span>, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">char</span>));<br>    Foo *_o0;<br>    _i0-&gt;<span class="hljs-built_in">write</span>(_a0);<br>    _o0 = _i0;<br>                        <br>    out_ref[<span class="hljs-number">0</span>] = <span class="hljs-built_in">reinterpret_cast</span>&lt;<span class="hljs-type">void</span> *&gt;(_o0);<br>}<br><br><br><span class="hljs-comment">/* CPPScope(name=(auto) Foo::void check();) */</span><br><span class="hljs-keyword">extern</span> <span class="hljs-string">"C"</span> <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">shim_3</span><span class="hljs-params">(<span class="hljs-type">void</span> **in_ref, <span class="hljs-type">void</span> **out_ref, <span class="hljs-type">const</span> <span class="hljs-type">char</span> *context)</span> </span>{<br>    Foo *_i0 = <span class="hljs-built_in">reinterpret_cast</span>&lt;Foo *&gt;(in_ref[<span class="hljs-number">0</span>]);<br>    Foo *_o0;<br>    _i0-&gt;<span class="hljs-built_in">check</span>();<br>    _o0 = _i0;<br>                        <br>    out_ref[<span class="hljs-number">0</span>] = <span class="hljs-built_in">reinterpret_cast</span>&lt;<span class="hljs-type">void</span> *&gt;(_o0);<br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<hr>
+<ul>
+<li><code>fuzz_write.cpp</code>核心代码：</li>
+</ul>
+<figure class="highlight c++"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-comment">/* CPPScope(name=(auto) Foo::Foo();) */</span><br><span class="hljs-keyword">extern</span> <span class="hljs-string">"C"</span> <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">shim_0</span><span class="hljs-params">(<span class="hljs-type">void</span> **in_ref, <span class="hljs-type">void</span> **out_ref, <span class="hljs-type">const</span> <span class="hljs-type">char</span> *context)</span> </span>{<br>    <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> _o0 = CURR_ID++;<br>    std::cout &lt;&lt; <span class="hljs-string">"    Foo *var_"</span> &lt;&lt; _o0 &lt;&lt; <span class="hljs-string">";"</span> &lt;&lt; std::endl;<br><br>    std::cout &lt;&lt; <span class="hljs-string">"    {"</span> &lt;&lt; std::endl;<br><br>    std::cout &lt;&lt; <span class="hljs-string">"        "</span> &lt;&lt; <span class="hljs-string">"var_"</span> &lt;&lt; _o0 &lt;&lt; <span class="hljs-string">" = MAKE(Foo);\n        Foo ref = Foo();\n        *"</span> &lt;&lt; <span class="hljs-string">"var_"</span> &lt;&lt; _o0 &lt;&lt; <span class="hljs-string">" = ref;"</span> &lt;&lt; std::endl;<br>    out_ref[<span class="hljs-number">0</span>] = <span class="hljs-built_in">reinterpret_cast</span>&lt;<span class="hljs-type">void</span> *&gt;(_o0);<br><br>    std::cout &lt;&lt; <span class="hljs-string">"    }"</span> &lt;&lt; std::endl;<br>}<br><br><br><span class="hljs-comment">/* CPPScope(name=(auto) Foo::~Foo();) */</span><br><span class="hljs-keyword">extern</span> <span class="hljs-string">"C"</span> <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">shim_1</span><span class="hljs-params">(<span class="hljs-type">void</span> **in_ref, <span class="hljs-type">void</span> **out_ref, <span class="hljs-type">const</span> <span class="hljs-type">char</span> *context)</span> </span>{<br>    <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> _i0 = <span class="hljs-built_in">reinterpret_cast</span>&lt;<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span>&gt;(in_ref[<span class="hljs-number">0</span>]);<br><br>    std::cout &lt;&lt; <span class="hljs-string">"    {"</span> &lt;&lt; std::endl;<br><br>    std::cout &lt;&lt; <span class="hljs-string">"        free("</span> &lt;&lt; <span class="hljs-string">"var_"</span> &lt;&lt; _i0 &lt;&lt; <span class="hljs-string">");"</span> &lt;&lt; std::endl;<br><br>    std::cout &lt;&lt; <span class="hljs-string">"    }"</span> &lt;&lt; std::endl;<br>}<br><br><br><span class="hljs-comment">/* CPPScope(name=(auto) Foo::void write(char val);) */</span><br><span class="hljs-keyword">extern</span> <span class="hljs-string">"C"</span> <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">shim_2</span><span class="hljs-params">(<span class="hljs-type">void</span> **in_ref, <span class="hljs-type">void</span> **out_ref, <span class="hljs-type">const</span> <span class="hljs-type">char</span> *context)</span> </span>{<br>    <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> _i0 = <span class="hljs-built_in">reinterpret_cast</span>&lt;<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span>&gt;(in_ref[<span class="hljs-number">0</span>]);<br>    <span class="hljs-type">char</span> _a0;<br>    <span class="hljs-built_in">memcpy</span>(&amp;_a0, context + <span class="hljs-number">0</span>, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">char</span>));<br>    <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> _o0 = CURR_ID++;<br>    std::cout &lt;&lt; <span class="hljs-string">"    Foo *var_"</span> &lt;&lt; _o0 &lt;&lt; <span class="hljs-string">";"</span> &lt;&lt; std::endl;<br><br>    std::cout &lt;&lt; <span class="hljs-string">"    {"</span> &lt;&lt; std::endl;<br><br>    std::cout &lt;&lt; <span class="hljs-string">"        "</span> &lt;&lt; <span class="hljs-string">"var_"</span> &lt;&lt; _i0 &lt;&lt; <span class="hljs-string">"-&gt;write("</span> &lt;&lt; (<span class="hljs-type">int</span>)_a0 &lt;&lt; <span class="hljs-string">");\n        "</span> &lt;&lt; <span class="hljs-string">"var_"</span> &lt;&lt; _o0 &lt;&lt; <span class="hljs-string">" = "</span> &lt;&lt; <span class="hljs-string">"var_"</span> &lt;&lt; _i0 &lt;&lt; <span class="hljs-string">";"</span> &lt;&lt; std::endl;<br>    out_ref[<span class="hljs-number">0</span>] = <span class="hljs-built_in">reinterpret_cast</span>&lt;<span class="hljs-type">void</span> *&gt;(_o0);<br><br>    std::cout &lt;&lt; <span class="hljs-string">"    }"</span> &lt;&lt; std::endl;<br>}<br><br><br><span class="hljs-comment">/* CPPScope(name=(auto) Foo::void check();) */</span><br><span class="hljs-keyword">extern</span> <span class="hljs-string">"C"</span> <span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">shim_3</span><span class="hljs-params">(<span class="hljs-type">void</span> **in_ref, <span class="hljs-type">void</span> **out_ref, <span class="hljs-type">const</span> <span class="hljs-type">char</span> *context)</span> </span>{<br>    <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> _i0 = <span class="hljs-built_in">reinterpret_cast</span>&lt;<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span>&gt;(in_ref[<span class="hljs-number">0</span>]);<br>    <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> _o0 = CURR_ID++;<br>    std::cout &lt;&lt; <span class="hljs-string">"    Foo *var_"</span> &lt;&lt; _o0 &lt;&lt; <span class="hljs-string">";"</span> &lt;&lt; std::endl;<br><br>    std::cout &lt;&lt; <span class="hljs-string">"    {"</span> &lt;&lt; std::endl;<br><br>    std::cout &lt;&lt; <span class="hljs-string">"        "</span> &lt;&lt; <span class="hljs-string">"var_"</span> &lt;&lt; _i0 &lt;&lt; <span class="hljs-string">"-&gt;check();\n        "</span> &lt;&lt; <span class="hljs-string">"var_"</span> &lt;&lt; _o0 &lt;&lt; <span class="hljs-string">" = "</span> &lt;&lt; <span class="hljs-string">"var_"</span> &lt;&lt; _i0 &lt;&lt; <span class="hljs-string">";"</span> &lt;&lt; std::endl;<br>    out_ref[<span class="hljs-number">0</span>] = <span class="hljs-built_in">reinterpret_cast</span>&lt;<span class="hljs-type">void</span> *&gt;(_o0);<br><br>    std::cout &lt;&lt; <span class="hljs-string">"    }"</span> &lt;&lt; std::endl;<br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<hr>
+<ul>
+<li><code>schema.json</code>内容如下：</li>
+</ul>
+<figure class="highlight json"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><code class="hljs json"><span class="hljs-punctuation">{</span><br>	<span class="hljs-attr">"types"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-punctuation">{</span><br>		<span class="hljs-attr">"id"</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span><span class="hljs-punctuation">,</span><br>		<span class="hljs-attr">"name"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"Foo"</span><br>	<span class="hljs-punctuation">}</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span><br>	<span class="hljs-attr">"scopes"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-punctuation">{</span><br>		<span class="hljs-attr">"name"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"(auto) Foo::Foo();"</span><span class="hljs-punctuation">,</span><br>		<span class="hljs-attr">"inputs"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span><br>		<span class="hljs-attr">"outputs"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-number">0</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span><br>		<span class="hljs-attr">"context"</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span><br>	<span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span> <span class="hljs-punctuation">{</span><br>		<span class="hljs-attr">"name"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"(auto) Foo::~Foo();"</span><span class="hljs-punctuation">,</span><br>		<span class="hljs-attr">"inputs"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-number">0</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span><br>		<span class="hljs-attr">"outputs"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span><br>		<span class="hljs-attr">"context"</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span><br>	<span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span> <span class="hljs-punctuation">{</span><br>		<span class="hljs-attr">"name"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"(auto) Foo::void write(char val);"</span><span class="hljs-punctuation">,</span><br>		<span class="hljs-attr">"inputs"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-number">0</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span><br>		<span class="hljs-attr">"outputs"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-number">0</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span><br>		<span class="hljs-attr">"context"</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1</span><br>	<span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span> <span class="hljs-punctuation">{</span><br>		<span class="hljs-attr">"name"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"(auto) Foo::void check();"</span><span class="hljs-punctuation">,</span><br>		<span class="hljs-attr">"inputs"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-number">0</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span><br>		<span class="hljs-attr">"outputs"</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-number">0</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span><br>		<span class="hljs-attr">"context"</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span><br>	<span class="hljs-punctuation">}</span><span class="hljs-punctuation">]</span><br><span class="hljs-punctuation">}</span><br></code></pre></td></tr></tbody></table></figure>
+
+<h3 id="B-模式格式（-star-）"><a href="#B-模式格式（-star-）" class="headerlink" title="B. 模式格式（:star:）"></a>B. 模式格式（<span class="github-emoji"><span>⭐</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/2b50.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span>）</h3><ul>
+<li>‎一个 GraphFuzz 模式是用 YAML 编写的模式对象的键值映射：‎</li>
+</ul>
+<figure class="highlight yaml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-attr">object1:</span><br>    <span class="hljs-attr">type:</span> <span class="hljs-string">...</span><br>    <span class="hljs-attr">name:</span> <span class="hljs-string">object1</span><br>    <span class="hljs-string">...</span><br><span class="hljs-attr">object2:</span><br>    <span class="hljs-attr">type:</span> <span class="hljs-string">...</span><br>    <span class="hljs-attr">name:</span> <span class="hljs-string">object2</span><br>    <span class="hljs-string">...</span><br><span class="hljs-string">...</span><br></code></pre></td></tr></tbody></table></figure>
+
+<h4 id="a-可用对象"><a href="#a-可用对象" class="headerlink" title="a. 可用对象"></a>a. 可用对象</h4><h5 id="结构体-x2F-类"><a href="#结构体-x2F-类" class="headerlink" title="结构体/类"></a>结构体/类</h5><figure class="highlight yaml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-attr">struct_Foo:</span><br>    <span class="hljs-attr">type:</span> <span class="hljs-string">struct</span> <span class="hljs-comment"># (or type: class)</span><br>    <span class="hljs-attr">name:</span> <span class="hljs-string">Foo</span><br>    <span class="hljs-attr">headers:</span> [<span class="hljs-string">'foo.h'</span>]<br>    <span class="hljs-attr">methods:</span><br>    <span class="hljs-bullet">-</span> <span class="hljs-string">void</span> <span class="hljs-string">Foo()</span><br>    <span class="hljs-bullet">-</span> <span class="hljs-string">void</span> <span class="hljs-string">~Foo()</span><br>    <span class="hljs-attr">static_methods:</span><br>    <span class="hljs-bullet">-</span> <span class="hljs-string">Foo</span> <span class="hljs-string">*</span> <span class="hljs-string">MakeFoo(int)</span><br></code></pre></td></tr></tbody></table></figure>
+
+<p>属性：</p>
+<table>
+<thead>
+<tr>
+<th>name</th>
+<th>type</th>
+<th>default value</th>
+<th>info</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>type</code></td>
+<td><code>string</code></td>
+<td>-</td>
+<td><code>struct</code> 或 <code>class</code></td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>-</td>
+<td>类的名字（如 <code>Foo</code>） 或一个模板实例的名字（如 <code>Foo&lt;int&gt;</code>）.</td>
+</tr>
+<tr>
+<td><code>methods</code></td>
+<td><code>List[endpoint]</code></td>
+<td><code>[]</code></td>
+<td>实例方法的列表（签名或端点对象）</td>
+</tr>
+<tr>
+<td><code>static_methods</code></td>
+<td><code>List[endpoint]</code></td>
+<td><code>[]</code></td>
+<td>静态方法的列表（签名或端点对象）</td>
+</tr>
+<tr>
+<td><code>headers</code></td>
+<td><code>List[string]</code></td>
+<td><code>[]</code></td>
+<td>包含所有封闭方法定义的C++头文件列表</td>
+</tr>
+<tr>
+<td><code>c_headers</code></td>
+<td><code>List[string]</code></td>
+<td><code>[]</code></td>
+<td>包含所有封闭方法定义的C头文件列表</td>
+</tr>
+<tr>
+<td><code>default_destructor</code></td>
+<td><code>bool</code></td>
+<td><code>false</code></td>
+<td>如果为 <code>true</code>, 则添加一个默认的析构函数端点（如 <code>void ~Foo()</code>）</td>
+</tr>
+<tr>
+<td><code>alloc_with_new</code></td>
+<td><code>bool</code></td>
+<td><code>false</code></td>
+<td>如果为 <code>true</code>, 通过<code>Foo *f = new Foo()</code> 来调用构造函数，而不是执行本地分配并使用一个复制构造函数</td>
+</tr>
+</tbody></table>
+<hr>
+<h5 id="枚举"><a href="#枚举" class="headerlink" title="枚举"></a>枚举</h5><figure class="highlight yaml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-attr">enum_Options:</span><br>    <span class="hljs-attr">type:</span> <span class="hljs-string">enum</span><br>    <span class="hljs-attr">name:</span> <span class="hljs-string">Options</span><br>    <span class="hljs-attr">headers:</span> [<span class="hljs-string">'options.h'</span>]<br>    <span class="hljs-attr">values:</span><br>    <span class="hljs-bullet">-</span> <span class="hljs-string">OptA</span><br>    <span class="hljs-bullet">-</span> <span class="hljs-string">OptB</span><br>    <span class="hljs-bullet">-</span> <span class="hljs-string">OptC</span><br></code></pre></td></tr></tbody></table></figure>
+
+<p>属性：</p>
+<table>
+<thead>
+<tr>
+<th>name</th>
+<th>type</th>
+<th>default value</th>
+<th>info</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>type</code></td>
+<td><code>string</code></td>
+<td>-</td>
+<td><code>enum</code></td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>-</td>
+<td>枚举名称（如<code>Options</code>）</td>
+</tr>
+<tr>
+<td><code>headers</code></td>
+<td><code>List[string]</code></td>
+<td><code>[]</code></td>
+<td>该枚举所需的C++头文件</td>
+</tr>
+<tr>
+<td><code>c_headers</code></td>
+<td><code>List[string]</code></td>
+<td><code>[]</code></td>
+<td>该枚举所需的C头文件</td>
+</tr>
+<tr>
+<td><code>values</code></td>
+<td><code>List[string]</code></td>
+<td><code>[]</code></td>
+<td>枚举值列表</td>
+</tr>
+</tbody></table>
+<hr>
+<h5 id="Typedef"><a href="#Typedef" class="headerlink" title="Typedef"></a>Typedef</h5><figure class="highlight yaml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-comment"># E.g.</span><br><span class="hljs-comment"># typedef float MyFoo;</span><br><br><span class="hljs-attr">typedef_foo:</span><br>  <span class="hljs-attr">type:</span> <span class="hljs-string">typedef</span><br>  <span class="hljs-attr">name:</span> <span class="hljs-string">MyFoo</span><br>  <span class="hljs-attr">headers:</span> [<span class="hljs-string">'foo.h'</span>]<br>  <span class="hljs-attr">value:</span> <span class="hljs-string">float</span><br></code></pre></td></tr></tbody></table></figure>
+
+<p>属性：</p>
+<table>
+<thead>
+<tr>
+<th>name</th>
+<th>type</th>
+<th>default value</th>
+<th>info</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>type</code></td>
+<td><code>string</code></td>
+<td>-</td>
+<td><code>typedef</code></td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>-</td>
+<td>新创建类型的名称（如 <code>MyFoo</code>）</td>
+</tr>
+<tr>
+<td><code>headers</code></td>
+<td><code>List[string]</code></td>
+<td><code>[]</code></td>
+<td>使用该类型所需的C++头文件</td>
+</tr>
+<tr>
+<td><code>c_headers</code></td>
+<td><code>List[string]</code></td>
+<td><code>[]</code></td>
+<td>使用该类型所需的C头文件</td>
+</tr>
+<tr>
+<td><code>value</code></td>
+<td><code>string</code></td>
+<td><code>''</code></td>
+<td>类型的值</td>
+</tr>
+</tbody></table>
+<hr>
+<h5 id="Simple（基本数据类型）"><a href="#Simple（基本数据类型）" class="headerlink" title="Simple（基本数据类型）"></a>Simple（基本数据类型）</h5><figure class="highlight yaml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-attr">simple_float:</span><br>  <span class="hljs-attr">type:</span> <span class="hljs-string">simple</span><br>  <span class="hljs-attr">name:</span> <span class="hljs-string">float</span><br>  <span class="hljs-attr">context_size:</span> <span class="hljs-number">4</span><br></code></pre></td></tr></tbody></table></figure>
+
+<p>属性：</p>
+<table>
+<thead>
+<tr>
+<th>name</th>
+<th>type</th>
+<th>default value</th>
+<th>info</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>type</code></td>
+<td><code>string</code></td>
+<td>-</td>
+<td><code>simple</code></td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>-</td>
+<td>内置类型的名称（如 <code>float</code>）</td>
+</tr>
+<tr>
+<td><code>context_size</code></td>
+<td><code>int</code></td>
+<td><code>0</code></td>
+<td>该类型字节大小</td>
+</tr>
+</tbody></table>
+<h4 id="b-端点定义"><a href="#b-端点定义" class="headerlink" title="b. 端点定义"></a>b. 端点定义</h4><ul>
+<li>端点有两种指定方式：<ol>
+<li>（自动）提供C/C++函数签名</li>
+<li>（手动）提供端点定义对象</li>
+</ol>
+</li>
+</ul>
+<h5 id="自动生成端点"><a href="#自动生成端点" class="headerlink" title="自动生成端点"></a>自动生成端点</h5><figure class="highlight yaml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-bullet">-</span> <span class="hljs-string">void</span> <span class="hljs-string">doBar(Bar</span> <span class="hljs-string">*,</span> <span class="hljs-string">int)</span><br></code></pre></td></tr></tbody></table></figure>
+
+<p>GraphFuzz使用下面的逻辑来决定如何解释端点签名（类似于正则匹配）：</p>
+<table>
+<thead>
+<tr>
+<th>condition</th>
+<th>result</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>in <code>methods</code> and matches <code>void &lt;name&gt;(...)</code>?</td>
+<td>standard constructor</td>
+</tr>
+<tr>
+<td>in <code>methods</code> and matches <code>void ~&lt;name&gt;(...)</code>?</td>
+<td>destructor</td>
+</tr>
+<tr>
+<td>in <code>methods</code>?</td>
+<td>instance method</td>
+</tr>
+<tr>
+<td>in <code>static_methods</code> and return type is <code>&lt;name&gt; *</code>?</td>
+<td>static constructor</td>
+</tr>
+<tr>
+<td>in <code>static_methods</code>?</td>
+<td>static function</td>
+</tr>
+</tbody></table>
+<h5 id="手动生成端点"><a href="#手动生成端点" class="headerlink" title="手动生成端点"></a>手动生成端点</h5><figure class="highlight yaml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-bullet">-</span> <span class="hljs-attr">my_endpoint:</span><br>    <span class="hljs-attr">inputs:</span> [<span class="hljs-string">'Foo'</span>, <span class="hljs-string">'Bar'</span>]<br>    <span class="hljs-attr">outputs:</span> [<span class="hljs-string">'Bar'</span>]<br>    <span class="hljs-attr">args:</span> [<span class="hljs-string">'int'</span>]<br>    <span class="hljs-attr">exec:</span> <span class="hljs-string">|</span><br><span class="hljs-string">        $i0-&gt;doFoo($i1, $a0);</span><br><span class="hljs-string">        $o0 = $i1;</span><br></code></pre></td></tr></tbody></table></figure>
+
+<p>属性：</p>
+<table>
+<thead>
+<tr>
+<th>name</th>
+<th>type</th>
+<th>default value</th>
+<th>info</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>inputs</code></td>
+<td><code>List[string]</code></td>
+<td><code>[]</code></td>
+<td>实时输入类型的列表</td>
+</tr>
+<tr>
+<td><code>outputs</code></td>
+<td><code>List[string]</code></td>
+<td><code>[]</code></td>
+<td>实时输出类型的列表</td>
+</tr>
+<tr>
+<td><code>args</code></td>
+<td><code>List[string]</code></td>
+<td><code>[]</code></td>
+<td>上下文参数列表。这里可以使用长度固定的数组，如 <code>int[10]</code> 或 <code>char[256]</code>。</td>
+</tr>
+<tr>
+<td><code>exec</code></td>
+<td><code>string</code></td>
+<td><code>''</code></td>
+<td>执行模板 (C/C++)。 <code>$(i/o/a)N</code> 宏分别引用第N个输入/输出/参数对象</td>
+</tr>
+</tbody></table>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E6%A8%A1%E7%B3%8A%E6%B5%8B%E8%AF%95/">#模糊测试</a>
+      
+        <a href="/tags/%E5%B7%A5%E5%85%B7/">#工具</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>GraphFuzz使用说明</div>
+      <div>http://example.com/2022/06/24/GraphFuzz使用说明/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>bladchan</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年6月24日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/07/06/AFLplusplus%E6%BA%90%E7%A0%81%E6%B5%85%E6%9E%90/" title="AFL++源码浅析">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">AFL++源码浅析</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Chan</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Powered by Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
