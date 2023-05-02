@@ -23,72 +23,14 @@
 <meta property="og:site_name" content="chan&#39;s blog">
 <meta property="og:description" content="AFL插桩剖析I. 前置知识 编译器产生可执行文件的流程如下图1、2所示（以gcc编译器为例，clang同理）：   图1 gcc编译器工作流程（顶层架构）   图2 clang编译器工作流程（顶层架构）   主流的编译器【图1中第二个阶段】包括三个组件：前端、中间端和后端 [1] 前端：读取源文件并对其进行分析，通常是将源码转化为标准抽象语法树（AST） 中间端：进行源码优化，通常是使用生成的某">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="http://bladchan.github.io/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/1.png">
-<meta property="og:image" content="http://bladchan.github.io/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/2.png">
-<meta property="og:image" content="http://bladchan.github.io/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/4.png">
-<meta property="og:image" content="http://bladchan.github.io/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/5.png">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/27a1.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f914.png?v8">
-<meta property="og:image" content="http://bladchan.github.io/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/3.png">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/270b.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/26a0.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f330.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/270b.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/26a0.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f330.png?v8">
-<meta property="og:image" content="http://bladchan.github.io/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/6.png">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
-<meta property="og:image" content="http://bladchan.github.io/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/7.png">
-<meta property="og:image" content="http://bladchan.github.io/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/8.png">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
-<meta property="og:image" content="http://bladchan.github.io/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/9.png">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
-<meta property="og:image" content="http://bladchan.github.io/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/10.png">
-<meta property="og:image" content="http://bladchan.github.io/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/11.png">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/27a1.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/27a1.png?v8">
-<meta property="og:image" content="http://bladchan.github.io/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/12.png">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f4d3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f4ad.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/270b.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/26a0.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/2714.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/274c.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/2753.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f914.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0033-20e3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f914.png?v8">
-<meta property="og:image" content="http://bladchan.github.io/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/13.png">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/1f914.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8">
-<meta property="og:image" content="http://bladchan.github.io/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/14.png">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0033-20e3.png?v8">
-<meta property="og:image" content="https://github.githubassets.com/images/icons/emoji/unicode/0034-20e3.png?v8">
+<meta property="og:image" content="http://bladchan.github.io/image/afl_instrument.jpg">
 <meta property="article:published_time" content="2022-12-27T09:55:00.000Z">
-<meta property="article:modified_time" content="2023-05-01T09:00:42.174Z">
+<meta property="article:modified_time" content="2023-05-02T07:10:43.170Z">
 <meta property="article:author" content="bladchan">
 <meta property="article:tag" content="模糊测试">
 <meta property="article:tag" content="AFL">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="http://bladchan.github.io/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/1.png">
+<meta name="twitter:image" content="http://bladchan.github.io/image/afl_instrument.jpg">
   
   
   
@@ -1266,9 +1208,9 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2023/03/09/AFLplusplus%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%98%E5%BC%82%E5%99%A8%E2%80%94%E6%BA%90%E7%A0%81%E7%BB%86%E8%8A%82/" title="AFLplusplus自定义变异器—源码细节">
+                      <a href="/2023/01/10/ReZZan/" title="ReZZan:Efficient Greybox Fuzzing to Detect Memory Errors">
                         <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">AFLplusplus自定义变异器—源码细节</span>
+                        <span class="hidden-mobile">ReZZan:Efficient Greybox Fuzzing to Detect Memory Errors</span>
                         <span class="visible-mobile">上一篇</span>
                       </a>
                     

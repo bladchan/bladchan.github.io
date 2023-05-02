@@ -237,7 +237,13 @@
   <div class="row mx-auto index-card">
     
     
-    <article class="col-12 col-md-12 mx-auto index-info">
+      <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2023/04/20/AFLplusplus-cmplog%E6%8F%92%E6%A1%A9%E8%A7%A3%E6%9E%90/" target="_self">
+          <img src="/image/cmplog.jpg" srcset="/img/loading.gif" lazyload alt="AFLplusplus cmplog插桩解析">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
       <h1 class="index-header">
         
         <a href="/2023/04/20/AFLplusplus-cmplog%E6%8F%92%E6%A1%A9%E8%A7%A3%E6%9E%90/" target="_self">
@@ -246,7 +252,7 @@
       </h1>
 
       
-      <a class="index-excerpt index-excerpt__noimg" href="/2023/04/20/AFLplusplus-cmplog%E6%8F%92%E6%A1%A9%E8%A7%A3%E6%9E%90/" target="_self">
+      <a class="index-excerpt " href="/2023/04/20/AFLplusplus-cmplog%E6%8F%92%E6%A1%A9%E8%A7%A3%E6%9E%90/" target="_self">
         <div>
           AFL++’s Cmplog插桩1. 源码解析afl-cc.c 代码片段：  123456789101112131415161718192021222324252627	if (cmplog_mode) {      cc_params[cc_par_cnt++] = "-fno-inline";#if LLVM_MAJOR &gt;= 11
         </div>
@@ -279,7 +285,13 @@
   <div class="row mx-auto index-card">
     
     
-    <article class="col-12 col-md-12 mx-auto index-info">
+      <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2023/03/09/AFLplusplus%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%98%E5%BC%82%E5%99%A8%E2%80%94%E6%BA%90%E7%A0%81%E7%BB%86%E8%8A%82/" target="_self">
+          <img src="/image/aflpp_bg.svg" srcset="/img/loading.gif" lazyload alt="AFLplusplus自定义变异器—源码细节">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
       <h1 class="index-header">
         
         <a href="/2023/03/09/AFLplusplus%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%98%E5%BC%82%E5%99%A8%E2%80%94%E6%BA%90%E7%A0%81%E7%BB%86%E8%8A%82/" target="_self">
@@ -288,7 +300,7 @@
       </h1>
 
       
-      <a class="index-excerpt index-excerpt__noimg" href="/2023/03/09/AFLplusplus%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%98%E5%BC%82%E5%99%A8%E2%80%94%E6%BA%90%E7%A0%81%E7%BB%86%E8%8A%82/" target="_self">
+      <a class="index-excerpt " href="/2023/03/09/AFLplusplus%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%98%E5%BC%82%E5%99%A8%E2%80%94%E6%BA%90%E7%A0%81%E7%BB%86%E8%8A%82/" target="_self">
         <div>
           AFL++自定义变异器 支持C/C++库和Python模式 C/C++ library (*.so) Python module    1. 简介相关注意事项：  custom_mutator_stage在确定性变异之后启用； 在使用C/C++接口时，需要引入一个动态链接库（动态库路径存放在环境变量AFL_CUSTOM_MUTATOR_LIBRARY中），该库（部分）定义AFL++暴露出来的接口
         </div>
@@ -321,7 +333,59 @@
   <div class="row mx-auto index-card">
     
     
-    <article class="col-12 col-md-12 mx-auto index-info">
+      <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2023/01/10/ReZZan/" target="_self">
+          <img src="/image/rezzan.jpg" srcset="/img/loading.gif" lazyload alt="ReZZan:Efficient Greybox Fuzzing to Detect Memory Errors">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2023/01/10/ReZZan/" target="_self">
+          ReZZan:Efficient Greybox Fuzzing to Detect Memory Errors
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt " href="/2023/01/10/ReZZan/" target="_self">
+        <div>
+          1. 引言 内存错误是安全漏洞的常见来源  赋予攻击者更改内存内容的能力，可能会构成信息泄露和控制流劫持   内存错误的静默性：  内存错误不一定会导致程序立即崩溃 进行插桩监控内存情况：Sanitizer（e.g. AddressSanitizer）   fork模式的模糊测试 + 内容错误sanitizers = 显著的性能开销  AFL+AddressSanitizer：吞吐量降低了约58%
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2023-01-10 11:20" pubdate>
+              2023-01-10
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/%E8%AE%BA%E6%96%87%E9%98%85%E8%AF%BB/">#论文阅读</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+      <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/" target="_self">
+          <img src="/image/afl_instrument.jpg" srcset="/img/loading.gif" lazyload alt="深入浅出AFL插桩">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
       <h1 class="index-header">
         
         <a href="/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/" target="_self">
@@ -330,7 +394,7 @@
       </h1>
 
       
-      <a class="index-excerpt index-excerpt__noimg" href="/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/" target="_self">
+      <a class="index-excerpt " href="/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/" target="_self">
         <div>
           AFL插桩剖析I. 前置知识 编译器产生可执行文件的流程如下图1、2所示（以gcc编译器为例，clang同理）：   图1 gcc编译器工作流程（顶层架构）   图2 clang编译器工作流程（顶层架构）   主流的编译器【图1中第二个阶段】包括三个组件：前端、中间端和后端 [1] 前端：读取源文件并对其进行分析，通常是将源码转化为标准抽象语法树（AST） 中间端：进行源码优化，通常是使用生成的某
         </div>
@@ -363,7 +427,13 @@
   <div class="row mx-auto index-card">
     
     
-    <article class="col-12 col-md-12 mx-auto index-info">
+      <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2022/09/27/Boofuzz%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" target="_self">
+          <img src="/image/boofuzz.png" srcset="/img/loading.gif" lazyload alt="Boofuzz源码解析">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
       <h1 class="index-header">
         
         <a href="/2022/09/27/Boofuzz%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" target="_self">
@@ -372,7 +442,7 @@
       </h1>
 
       
-      <a class="index-excerpt index-excerpt__noimg" href="/2022/09/27/Boofuzz%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" target="_self">
+      <a class="index-excerpt " href="/2022/09/27/Boofuzz%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" target="_self">
         <div>
           boofuzz源码分析以ftp_simple.py为例： 12345session = Session(target=Target(connection=TCPSocketConnection("127.0.0.1", 21)))  # 创建sessiondefine_proto(session=session)  # 定义protosession.fuzz()	# 开始模糊测试  其中，defi
         </div>
@@ -407,7 +477,13 @@
   <div class="row mx-auto index-card">
     
     
-    <article class="col-12 col-md-12 mx-auto index-info">
+      <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2022/07/25/GraphFuzz%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" target="_self">
+          <img src="/image/GraphFuzz.jpg" srcset="/img/loading.gif" lazyload alt="GraphFuzz源码解析">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
       <h1 class="index-header">
         
         <a href="/2022/07/25/GraphFuzz%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" target="_self">
@@ -416,7 +492,7 @@
       </h1>
 
       
-      <a class="index-excerpt index-excerpt__noimg" href="/2022/07/25/GraphFuzz%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" target="_self">
+      <a class="index-excerpt " href="/2022/07/25/GraphFuzz%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" target="_self">
         <div>
           GraphFuzz源码解析 核心代码位于core目录下 graph.hpp为图结构体头文件，主要包含一个结构体NodeLink和一个类TGraph schema.hpp声明了一个类Schema，同时包含ScopeDef、Signature，hash，ScopeTree和TypeTree这五个结构体 harness.cpp为生成的harness文件，该文件调用libfuzzer的接口来实现相关功能
         </div>
@@ -449,7 +525,13 @@
   <div class="row mx-auto index-card">
     
     
-    <article class="col-12 col-md-12 mx-auto index-info">
+      <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2022/07/06/AFLplusplus%E6%BA%90%E7%A0%81%E6%B5%85%E6%9E%90/" target="_self">
+          <img src="/image/aflpp_bg.svg" srcset="/img/loading.gif" lazyload alt="AFL++源码浅析">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
       <h1 class="index-header">
         
         <a href="/2022/07/06/AFLplusplus%E6%BA%90%E7%A0%81%E6%B5%85%E6%9E%90/" target="_self">
@@ -458,7 +540,7 @@
       </h1>
 
       
-      <a class="index-excerpt index-excerpt__noimg" href="/2022/07/06/AFLplusplus%E6%BA%90%E7%A0%81%E6%B5%85%E6%9E%90/" target="_self">
+      <a class="index-excerpt " href="/2022/07/06/AFLplusplus%E6%BA%90%E7%A0%81%E6%B5%85%E6%9E%90/" target="_self">
         <div>
           AFL++源码解析afl-fuzz.cmain函数 rand_set_seed()设置四个种子：afl-&gt;init_seed, afl-&gt;rand_seed[0-2] while循环对选项进行判断，支持的选项有："+Ab:B:c:CdDe:E:hi:I:f:F:g:G:l:L:m:M:nNOo:p:RQs:S:t:T:UV:WXx:YZ"：     选项 描述    -i dir 测试
         </div>
@@ -491,7 +573,13 @@
   <div class="row mx-auto index-card">
     
     
-    <article class="col-12 col-md-12 mx-auto index-info">
+      <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2022/06/24/GraphFuzz%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E/" target="_self">
+          <img src="/image/GraphFuzz1.png" srcset="/img/loading.gif" lazyload alt="GraphFuzz使用说明">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
       <h1 class="index-header">
         
         <a href="/2022/06/24/GraphFuzz%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E/" target="_self">
@@ -500,7 +588,7 @@
       </h1>
 
       
-      <a class="index-excerpt index-excerpt__noimg" href="/2022/06/24/GraphFuzz%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E/" target="_self">
+      <a class="index-excerpt " href="/2022/06/24/GraphFuzz%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E/" target="_self">
         <div>
           GraphFuzz使用说明1. 概述 GraphFuzz是一个用于构建结构感知、库API模糊器的实验性框架  论文： 《GraphFuzz: Library API Fuzzing with Lifetime-aware Dataflow Graphs》  GraphFuzz包含：  gfuzz：命令行工具用来合成harness libgraphfuzz：一个运行时图变异引擎   文档：hgarr
         </div>

@@ -1,0 +1,1095 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="bladchan">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="1. 引言 内存错误是安全漏洞的常见来源  赋予攻击者更改内存内容的能力，可能会构成信息泄露和控制流劫持   内存错误的静默性：  内存错误不一定会导致程序立即崩溃 进行插桩监控内存情况：Sanitizer（e.g. AddressSanitizer）   fork模式的模糊测试 + 内容错误sanitizers &#x3D; 显著的性能开销  AFL+AddressSanitizer：吞吐量降低了约58%">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ReZZan:Efficient Greybox Fuzzing to Detect Memory Errors">
+<meta property="og:url" content="http://bladchan.github.io/2023/01/10/ReZZan/index.html">
+<meta property="og:site_name" content="chan&#39;s blog">
+<meta property="og:description" content="1. 引言 内存错误是安全漏洞的常见来源  赋予攻击者更改内存内容的能力，可能会构成信息泄露和控制流劫持   内存错误的静默性：  内存错误不一定会导致程序立即崩溃 进行插桩监控内存情况：Sanitizer（e.g. AddressSanitizer）   fork模式的模糊测试 + 内容错误sanitizers &#x3D; 显著的性能开销  AFL+AddressSanitizer：吞吐量降低了约58%">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://bladchan.github.io/image/rezzan.jpg">
+<meta property="article:published_time" content="2023-01-10T03:20:55.000Z">
+<meta property="article:modified_time" content="2023-05-02T07:28:40.693Z">
+<meta property="article:author" content="bladchan">
+<meta property="article:tag" content="论文阅读">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://bladchan.github.io/image/rezzan.jpg">
+  
+  
+  
+  <title>ReZZan:Efficient Greybox Fuzzing to Detect Memory Errors - chan&#39;s blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"bladchan.github.io","root":"/","version":"1.9.4","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.3.0">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+</head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Chan&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/">
+                <i class="iconfont icon-link-fill"></i>
+                <span>友链</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="ReZZan:Efficient Greybox Fuzzing to Detect Memory Errors"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-01-10 11:20" pubdate>
+          2023年1月10日 上午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          6.7k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          57 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">ReZZan:Efficient Greybox Fuzzing to Detect Memory Errors</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="1-引言"><a href="#1-引言" class="headerlink" title="1. 引言"></a>1. 引言</h2><ul>
+<li><p>内存错误是安全漏洞的常见来源</p>
+<ul>
+<li>赋予攻击者更改内存内容的能力，可能会构成信息泄露和控制流劫持</li>
+</ul>
+</li>
+<li><p>内存错误的静默性：</p>
+<ul>
+<li>内存错误不一定会导致程序立即崩溃</li>
+<li>进行插桩监控内存情况：Sanitizer（e.g. AddressSanitizer）</li>
+</ul>
+</li>
+<li><p>fork模式的模糊测试 + 内容错误sanitizers = 显著的性能开销</p>
+<ul>
+<li>AFL+AddressSanitizer：吞吐量降低了约58%</li>
+<li>性能下降的原因：<strong>sanitizer的实现与模糊测试过程之间的不利交互</strong><ul>
+<li>传统sanitizer使用<strong>disjoint metadata</strong>来跟踪内存状态</li>
+<li>维护disjoint metadata会引入额外的开销</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>基于LBC和REST等工具首创的随机化嵌入式令牌（RET）的思想来对内存sanitizer进行设计</p>
+</li>
+<li><p>ReZZan = REt + fuZZing + sANitizer</p>
+<ul>
+<li>在fork模式的模糊测试下速度明显更快</li>
+<li>1.27 × 原生AFL的运行（AddressSanitizer 2.36 x ）</li>
+<li>额外提供一种简化配置，无需精确的边界检查，开销为1.14 x</li>
+</ul>
+</li>
+</ul>
+<h3 id="1-1-贡献"><a href="#1-1-贡献" class="headerlink" title="1.1 贡献"></a>1.1 贡献</h3><ul>
+<li><p>提出了一种基于随机嵌入令牌（RET）概念的内存错误sanitizer的设计</p>
+</li>
+<li><p>调整设计，无需使用disjoint metadata；此外介绍了在基于RET的设计下用于字节精确内存错误检测的精细边界检查的概念</p>
+</li>
+<li><p>以ReZZan工具的形式实现了该设计，并将ReZZan与流行的灰盒模糊器集成在一起</p>
+</li>
+<li><p>对ASAN和FuZZan进行比较，显示该方法的优越性</p>
+</li>
+<li><p>项目<strong>开源</strong>：<a target="_blank" rel="noopener" href="https://github.com/bajinsheng/ReZZan">https://github.com/bajinsheng/ReZZan</a></p>
+</li>
+</ul>
+<h2 id="2-背景"><a href="#2-背景" class="headerlink" title="2. 背景"></a>2. 背景</h2><p><strong>模糊测试：</strong></p>
+<ul>
+<li>fork server：</li>
+</ul>
+<p><img src="/2023/01/10/ReZZan/1.png" srcset="/img/loading.gif" lazyload></p>
+<hr>
+<p><strong>内存错误Sanitizers：</strong></p>
+<p><img src="/2023/01/10/ReZZan/2.png" srcset="/img/loading.gif" lazyload></p>
+<ul>
+<li><p>专用Sanitizer和通用Sanitizer</p>
+<p>专用Sanitizer：</p>
+<ul>
+<li>Stack金丝雀专门用于堆栈缓冲区溢出</li>
+<li>LowFat和轻量级边界检查（LBC）专门用于溢出/下溢</li>
+<li>FreeSentry专门用于UAF</li>
+</ul>
+<p>通用Sanitizer：</p>
+<ul>
+<li>AddressSanitizer：字节级精度检测所有类型的内存错误</li>
+</ul>
+</li>
+<li><p>内存错误检测可能是部分检测或不精确检测：</p>
+<ul>
+<li>GWP-ASAN仅对随机选择的堆对象应用保护</li>
+<li>LowFat/REST允许小的溢出（不与其他对象相交，即不影响其他对象变量值）</li>
+</ul>
+</li>
+<li><p>AddressSanitizer：</p>
+<ul>
+<li><p>实施一种<strong>内存投毒</strong>（<em>memory poisoning</em>）的方法，其基本思想是：当使用一个内存错误能够访问该内存时，该内存则别标记为“中毒”，包括：</p>
+<ul>
+<li>对每个有效分配对象之间插入的小的<strong>REDZONE</strong>区域进行标记，该区域用于检测对象边界溢出/下溢错误</li>
+<li>对<code>free()</code>的内存进行标记来检测UAF错误</li>
+</ul>
+</li>
+<li><p>使用运行时支持库来<span class="github-emoji"><span>1⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 在已分配对象之间插入redzone并对其标记；<span class="github-emoji"><span>2⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 对<code>free()</code>的内存进行标记</p>
+</li>
+<li><p>对所有内存访问操作进行插桩，以检测内存是否中毒：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-keyword">if</span> ( poisoned ( p )) <span class="hljs-comment">// Instrumentation</span><br>	error ();<br>* p = v ; <span class="hljs-comment">/* or */</span> v = * p ; <span class="hljs-comment">// Access </span><br></code></pre></td></tr></tbody></table></figure></li>
+</ul>
+</li>
+<li><p><strong>AddressSanitizer的内存投毒</strong>：</p>
+<ul>
+<li><p>将程序的虚拟地址空间分为两个部分来实现内存投毒：应用程序内存(application memory) 和 影子内存(shadow memory)</p>
+</li>
+<li><p>影子内存用以跟踪应用程序内存中每个字节的中毒情况。因此，应用程序内存每8个字节都将映射到相应的影子字节，i.e. $addr_{shadow}=offset_{shadow}+(addr/8)$，这里的影子内存其实就是<strong>disjoint metadata</strong>的一种表现</p>
+</li>
+<li><p><strong>disjoint metadata</strong>（i.e. 一种额外的metadata）：<span class="github-emoji"><span>1⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 由Sanitizer维护；<span class="github-emoji"><span>2⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 与应用程序内存/数据分离</p>
+<ul>
+<li>会带来额外的内存开销</li>
+<li>影响了内存位置（i.e. 应用程序和影子内存是分离的）</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>内存投毒的替代实现——<strong>RET（随机化嵌入令牌）</strong>：</p>
+<ul>
+<li><p>poisoned内存由一个特殊的<strong>令牌</strong>表示，该令牌初始化为某个预定的随机数值，如果内存直接存储该随机值，则认为内存“中毒”了</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c">poisoned(p)=(*(p-p%<span class="hljs-keyword">sizeof</span>(Token))==NONCE)<br></code></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>如果NONCE值与程序正常执行期间创建的合法值冲突，则可能会发生错误的检测</p>
+</li>
+<li><p><strong>REST</strong>使用一个非常大的令牌大小（整个512位缓存线）和一个强大的伪随机源</p>
+<ul>
+<li><p>大型（多字节）令牌会导致内存错误检测粒度降低（粗粒度）</p>
+</li>
+<li><p>e.g. 给定REST 512位（64字节）令牌，对malloc(27)的调用将：</p>
+<p>(1) 将分配大小增加 64 - 27 = 37 字节</p>
+<p>(2) 分配已对齐了一个64字节的对象</p>
+<p>(3) 在64..127字节处存储一个token值来实现redzone</p>
+<p>i.e. 27..63字节的溢出都不会访问令牌，即不会判断为内存错误，因此<strong>REST不是字节精确的</strong></p>
+</li>
+</ul>
+</li>
+<li><p>RET思想最早被<strong>LBC</strong>所使用，不像REST，LBC使用单字节（8位）令牌大小，允许进行字节精确的内存错误检测，但这也意味着碰撞不可避免；为了避免碰撞，LBC实现了一种混合方法，该方法保留了<strong>disjoint metadata</strong>，以区分冲突和合法的内存错误</p>
+</li>
+</ul>
+</li>
+</ul>
+<hr>
+<p><strong>问题描述：</strong></p>
+<ul>
+<li><p>现象：模糊测试和Sanitizer应该协同工作，但在实践中，模糊测试和Sanitizer的组合性能较差</p>
+</li>
+<li><p>根本原因：fork()系统调用的写时复制（<em>copy-on-write</em> COW）语义与Sanitizer对于任何<strong>disjoint metadata</strong>的初始化/使用之间的交互</p>
+<ul>
+<li>子进程因发生页面错误而拷贝页</li>
+<li>fuzzing + sanitizer会导致页面错误的激增：一个用于已分配的对象，另一个用于<strong>disjoint metadata</strong></li>
+</ul>
+</li>
+<li><p>AddressSanitizer还引入了与fork()相关的其他开销，e.g.复制内核数据结构（包括虚拟内存VMA、页表和相关拆卸开销）</p>
+</li>
+</ul>
+<hr>
+<p><strong>解决办法</strong>：</p>
+<ul>
+<li>一个想法是选择一个具有低内存开销和高局部性的内存错误Sanitizer</li>
+<li>另一个想法是优化<strong>disjoint metadata</strong>的表示</li>
+</ul>
+<h3 id="2-1-我们的设计"><a href="#2-1-我们的设计" class="headerlink" title="2.1 我们的设计"></a>2.1 我们的设计</h3><ul>
+<li><p>提出一种基于随机化嵌入令牌（RET）的变体，该变体不使用影子内存或其他disjoint metadata表示</p>
+</li>
+<li><p>关键思想是通过使用内存本身跟踪中毒状态</p>
+<ul>
+<li>避免任何的其他页错误（由disjoint metadata的初始化或访问导致的）</li>
+<li>插桩检查和相应的内存操作不会带来额外的页错误</li>
+</ul>
+</li>
+<li><p>设计的主要元素总结如下：</p>
+<p><span class="github-emoji"><span>1⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <strong>令牌大小</strong></p>
+<ul>
+<li>某些现有的工具基于RET设计，如RESR（令牌大小512位）和LBC（令牌大小8位）</li>
+<li>见解：对于模糊测试应用，可以容忍一些小级别的错误检测<ul>
+<li>medium 令牌大小：64位</li>
+<li>使用不同的随机化NONCE值重新执行测试用例可以在一定程序上减轻错误检测的开销</li>
+</ul>
+</li>
+</ul>
+<p><span class="github-emoji"><span>2⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <strong>内存错误检测粒度</strong></p>
+<ul>
+<li>在基本的RET设计下，tokens需要存储在token大小对齐的边界上，也就是说64位tokens需要进行8字节对齐</li>
+<li>对RET进行改进：对象边界信息直接<strong>编码</strong>到令牌表示本身中</li>
+</ul>
+<p><span class="github-emoji"><span>3⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0033-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <strong>硬件</strong></p>
+<ul>
+<li>REST：无标准硬件扩展；LBC：32位x86系统</li>
+<li>本文提出的基于RET的设计：针对标准硬件（x86_64）和标准模糊器设计</li>
+</ul>
+</li>
+</ul>
+<h2 id="3-基本内存错误检测"><a href="#3-基本内存错误检测" class="headerlink" title="3. 基本内存错误检测"></a>3. 基本内存错误检测</h2><ul>
+<li>使用以下结构类型来定义RET：</li>
+</ul>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">Token</span> {</span> <span class="hljs-type">uint64_t</span> random; };<br></code></pre></td></tr></tbody></table></figure>
+
+<hr>
+<p><span class="github-emoji"><span>1⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <strong>插桩模式：</strong></p>
+<ul>
+<li>基本方法：转换程序（e.g.使用一个LLVM编译器基础设施<strong>pass</strong>）来在每个内存访问之前插入插桩代码</li>
+<li>插桩内容：检查是否违反给定的安全属性（在设计的sanitizer中，该安全属性是相应访问的内容是否被poisoned）</li>
+</ul>
+<p><span class="github-emoji"><span>🌰</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f330.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span>:</p>
+<p><img src="/2023/01/10/ReZZan/3.png" srcset="/img/loading.gif" lazyload></p>
+<ul>
+<li><img src="/2023/01/10/ReZZan/4.png" srcset="/img/loading.gif" lazyload></li>
+</ul>
+<blockquote>
+<p>第4行内存间接引用不会产生任何其他页错误，而第5-6行的错误检查访问内存以检索存储在全局变量中的NONCE值，而NONCE存储在单个位置，因此这里<strong>最多会额外产生一个页错误</strong></p>
+</blockquote>
+<p><span class="github-emoji"><span>2⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <strong>运行时支持：</strong></p>
+<ul>
+<li><p>加强内存安全，修改了运行时环境以毒化redzone和free内存</p>
+</li>
+<li><p>每一个对象类处理方式不同：</p>
+<p><strong>堆分配对象</strong>：e.g. <code>malloc</code>, <code>realloc</code>, <code>new</code>等都被替换成为每一个分配目标后添加了redzone的版本，redzones的实现与其他内存错误sanitizer相似，但也有不同：</p>
+<ol>
+<li>Poisoning是通过将NONCE-初始化令牌直接写入redzone内存来实现的</li>
+<li>redzone的大小是1个或者2个tokens（取决于对齐）</li>
+<li>redzone放置在目标的最后，通过前一个对象的redzone来检测Underflows</li>
+</ol>
+<p>实现了一个简单的自定义内存分配器：连续分配目标</p>
+<p>堆内存释放：释放的目标相应内存填充为一个NONCE-初始化的token；维护了一个隔离区（本质上是一个队列），隔离区存放了释放的内存目标，目的是延迟重新分配，从而更可能检测到<code>reuse-after-free</code>。从隔离区删除对象以便重新分配，相应的内存在使用前清零以“unpoison”该内存。</p>
+<hr>
+<p><strong>栈分配对象</strong>：使用LLVM pass实现转换</p>
+<ol>
+<li>修改分配大小：包含原始分配的大小和一个redzone内存</li>
+<li>redzone内存将写入一个NONCE-初始化token，剩余内存全部置0</li>
+</ol>
+<hr>
+<p><strong>全局变量</strong>： 使用LLVM pass实现转换</p>
+<p>具体操作和栈分配对象相似，不再赘述</p>
+</li>
+</ul>
+<h2 id="4-改进的边界检查"><a href="#4-改进的边界检查" class="headerlink" title="4. 改进的边界检查"></a>4. 改进的边界检查</h2><ul>
+<li><p>基本思想：除了随机化的NONCE之外，还将对象边界信息<strong>编码</strong>存进嵌入令牌中，该边界信息可以在运行时检索</p>
+</li>
+<li><p>包含两个组件：</p>
+<ul>
+<li><em>random</em>：NONCE值</li>
+<li>boundary：目标边界的编码形式：</li>
+</ul>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c">size mod <span class="hljs-title function_">sizeof</span><span class="hljs-params">(Token)</span>  <span class="hljs-comment">// size是目标的大小</span><br></code></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>改进的令牌是由具有两个位字段的结构表示：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">Token</span> {</span><br>	<span class="hljs-type">uint64_t</span> random :<span class="hljs-number">61</span>; <span class="hljs-comment">// NONCE</span><br>	<span class="hljs-type">uint64_t</span> boundary :<span class="hljs-number">3</span>; <span class="hljs-comment">// Boundary encoding</span><br>};<br></code></pre></td></tr></tbody></table></figure>
+
+<p><em>boundary</em>字段至少需要<strong>3位</strong>来表示所有可能的边界值，那么<em>random</em>字段就只能缩减为<strong>61位</strong>（64-3）</p>
+</li>
+</ul>
+<hr>
+<ul>
+<li>使用额外的边界检查对内存访问进行插桩，基本思想如下图所示：</li>
+</ul>
+<p><img src="/2023/01/10/ReZZan/5.png" srcset="/img/loading.gif" lazyload></p>
+<p><span class="github-emoji"><span>🌰</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f330.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 假设目标大小不是一个令牌大小（8字节）的整数倍，e.g. (<em>size</em> mod sizeof(Token)) = 5，也就是要使用一个额外的sizeof(Token)-5=3字节的<strong>填充</strong>，在该填充中的溢出无法被基本的RET检测到，为了检测到这种溢出，我们对内存访问进行插桩以实施一个额外的边界检测：</p>
+<ol>
+<li><p>检查内存中当前word的下一个word[8字节]</p>
+</li>
+<li><p>如果下一个word不是一个token(i.e.随机比特与NONCE不相同)，那么内存访问是允许的</p>
+</li>
+<li><p>否则，检索边界字段并将其余内存访问范围 $lb…ub$ 进行比较，当下面条件不成立时，即发生了越界操作：</p>
+<p><img src="/2023/01/10/ReZZan/6.png" srcset="/img/loading.gif" lazyload></p>
+</li>
+</ol>
+<p>由于检查的是下一个word，因此基本上绕过了填充空间不足的问题，在图3的示例中，任何与填充重叠的内存访问都不会满足，因此可以检测到溢出</p>
+<hr>
+<p><strong>插桩模式：</strong></p>
+<p><img src="/2023/01/10/ReZZan/3.png" srcset="/img/loading.gif" lazyload></p>
+<ul>
+<li>图2的第9-13行为边界检查的插桩，这里假设该内存访问已经通过RET检查，保证了ub不包含token</li>
+</ul>
+<blockquote>
+<p>下一个word可能位于不同的页面，因此可能无法访问。这可以通过禁用对页边界的精确检查来进行处理，随之带来的就是精确度的降低；或者所有映射都可以通过一个NONCE-初始化页进行扩展，可以通过使用信号处理器来检测边界检查引起的故障，然后“按需”扩展相应的映射来实现</p>
+</blockquote>
+<h2 id="5-实验设置"><a href="#5-实验设置" class="headerlink" title="5. 实验设置"></a>5. 实验设置</h2><ul>
+<li><p>x86_64上实现了REt+fuZZing+sANitzer（ReZZan）：</p>
+<ul>
+<li>ReZZan：细粒度内存错误检测，包括RET（第三节）和字节准确的边界检测（第四节）</li>
+<li>ReZZan<sub>lite</sub>：减弱粒度的内存错误检测，仅包括RET。此版本速度更快，但无法检测到对象填充中的某些溢出</li>
+</ul>
+</li>
+<li><p>ReZZan的实现包括两个部分：</p>
+<ul>
+<li>LLVM Pass：<ul>
+<li>转换所有内存操作（e.g. <code>load/store</code>）以插入RET和边界检查插桩。对于ReZZan<sub>lite</sub>来说，边界检查将被忽略</li>
+<li>将所有栈分配操作（e.g. <code>alloca</code>）和全局变量转换为使用redzone保护的新版本</li>
+</ul>
+</li>
+<li>运行时库：<ul>
+<li>实现了替换堆分配函数（例如<code>malloc</code>、<code>free</code>等），替换的函数可以插入redzone以及poison释放的内存</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h3 id="研究问题"><a href="#研究问题" class="headerlink" title="研究问题"></a>研究问题</h3><ul>
+<li><p>主要假说：基于RET的消毒剂设计可以</p>
+<ol>
+<li>在模糊测试环境下表现出较低的性能开销</li>
+<li>实现与更传统的Sanitizer设计（如ASAN）类似的内存错误检测能力</li>
+</ol>
+</li>
+<li><p>六个研究问题：</p>
+</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>序号</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>RQ1 - 检测能力</td>
+<td>ReZZan是否检测到与ASan相同类型的内存错误？</td>
+</tr>
+<tr>
+<td>RQ2 - 执行速度</td>
+<td>在模糊测试环境下，ReZZan比ASan快多少？</td>
+</tr>
+<tr>
+<td>RQ3 - 分支覆盖</td>
+<td>ReZZan的分支覆盖范围与ASan相比如何？</td>
+</tr>
+<tr>
+<td>RQ4 - 漏洞发现有效性</td>
+<td>与ASan相比，ReZZan可以更快地暴露bug吗？</td>
+</tr>
+<tr>
+<td>RQ5 - 灵活性</td>
+<td>ReZZan可以用来模糊大型程序吗？ReZZan与其他模糊器兼容吗？</td>
+</tr>
+<tr>
+<td>RQ6 - 误报</td>
+<td>ReZZan在实际执行环境中的错误检测率是多少？</td>
+</tr>
+</tbody></table>
+<h3 id="基础设施"><a href="#基础设施" class="headerlink" title="基础设施"></a>基础设施</h3><p><strong>实验环境：</strong></p>
+<ul>
+<li>Intel Xeon CPU E5-2660v3：28个物理内核、56个逻辑内核，2.4GHz</li>
+<li>64GB RAM</li>
+<li>Ubuntu 16.04（64位）LTS（最大利用率为26个内核）</li>
+</ul>
+<hr>
+<p><strong>基线：</strong></p>
+<ul>
+<li>ASan（LLVM-12）、FuZZan（具有动态元数据结构切换模式）</li>
+<li>ASan和FuZZan都：<ol>
+<li>仍在维护</li>
+<li>支持x86_64</li>
+<li>可以与现有的模糊器集成</li>
+</ol>
+</li>
+</ul>
+<hr>
+<p><strong>模糊测试引擎</strong>：</p>
+<ul>
+<li>AFL（v2.57b）<ul>
+<li>是大多数现代模糊器的基础</li>
+<li>评估所使用的所有sanitizer都支持</li>
+</ul>
+</li>
+</ul>
+<hr>
+<p><strong>基准套件</strong>：</p>
+<ul>
+<li>RQ1：Juliet基准套件</li>
+<li>RQ2/RQ3：cxxfilt、nm、objdump、size（均来自binutils-2.31）、file（来自coreutils版本5.35）、jerryscript（版本2.4.0）、mupdf（版本1.19.0）、，libpng（版本1.6.38）、openssl（版本1.0.1f）、sqlite3（版本3.36.0）和tcpdump（版本4.10.0）</li>
+<li>RQ4：谷歌的fuzzer-test-suite2</li>
+</ul>
+<p>选择相同的初始种子语料库，如果没有提供输入则使用空文件</p>
+<hr>
+<p><strong>实验设置：</strong></p>
+<ul>
+<li>每个实验进行24小时，重复20次</li>
+</ul>
+<h2 id="6-评估结果"><a href="#6-评估结果" class="headerlink" title="6. 评估结果"></a>6. 评估结果</h2><h3 id="RQ-one-检测能力"><a href="#RQ-one-检测能力" class="headerlink" title="RQ:one: 检测能力"></a>RQ<span class="github-emoji"><span>1⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 检测能力</h3><p><img src="/2023/01/10/ReZZan/7.png" srcset="/img/loading.gif" lazyload></p>
+<ul>
+<li>ReZZan和ReZZan<sub>lite</sub>对于underflow detection的检测性能略低于ASan，这是因为ASan默认为堆栈对象使用double-wide（32字节）红区。当ReZZan配置类似时，也能100%检测下溢错误</li>
+</ul>
+<p><img src="/2023/01/10/ReZZan/8.png" srcset="/img/loading.gif" lazyload></p>
+<blockquote>
+<p>对于Juliet测试套件中的内存错误错误（CWE 121、122、124、126、127、416），ReZZan和ReZZan<sub>lite</sub>分别通过99.04%和87.89%的坏测试用例</p>
+</blockquote>
+<h3 id="RQ-two-执行速度"><a href="#RQ-two-执行速度" class="headerlink" title="RQ:two: 执行速度"></a>RQ<span class="github-emoji"><span>2⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 执行速度</h3><p><img src="/2023/01/10/ReZZan/9.png" srcset="/img/loading.gif" lazyload></p>
+<p><img src="/2023/01/10/ReZZan/10.png" srcset="/img/loading.gif" lazyload></p>
+<ul>
+<li>页错误</li>
+</ul>
+<p><img src="/2023/01/10/ReZZan/11.png" srcset="/img/loading.gif" lazyload></p>
+<blockquote>
+<p>当与模糊测试相结合时，ReZZan（1.27×）和ReZZan<sub>lite</sub>（1.14×）的开销低于传统的Sanitizer ASan（2.36×）和FuZZan（2.00×）。ReZZan和ReZZan<sub>lite</sub>的性能与没有任何内存错误sanitization的模糊测试相当，页面错误的数量也是如此.</p>
+</blockquote>
+<h3 id="RQ-three-分支覆盖"><a href="#RQ-three-分支覆盖" class="headerlink" title="RQ:three: 分支覆盖"></a>RQ<span class="github-emoji"><span>3⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0033-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 分支覆盖</h3><p><img src="/2023/01/10/ReZZan/12.png" srcset="/img/loading.gif" lazyload></p>
+<blockquote>
+<p>平均而言，ReZZan和ReZZan<sub>lite</sub>实现了与Native类似的分支覆盖。ReZZan的模糊化活动在24小时内探索了比ASan多5.54%的代码分支。</p>
+</blockquote>
+<h3 id="RQ-four-漏洞寻找有效性"><a href="#RQ-four-漏洞寻找有效性" class="headerlink" title="RQ:four: 漏洞寻找有效性"></a>RQ<span class="github-emoji"><span>4⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0034-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 漏洞寻找有效性</h3><p><img src="/2023/01/10/ReZZan/13.png" srcset="/img/loading.gif" lazyload></p>
+<blockquote>
+<p>ReZZan比ASan快3.68倍。在实践中，ReZZan还可以检测到比ReZZan<sub>lite</sub>更多的错误。</p>
+</blockquote>
+<h3 id="RQ-five-灵活性"><a href="#RQ-five-灵活性" class="headerlink" title="RQ:five: 灵活性"></a>RQ<span class="github-emoji"><span>5⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0035-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 灵活性</h3><ul>
+<li><p><strong>模糊器的支持：</strong></p>
+<ul>
+<li>与AFL++集成：</li>
+</ul>
+<p><img src="/2023/01/10/ReZZan/14.png" srcset="/img/loading.gif" lazyload></p>
+</li>
+<li><p><strong>持久模式模糊测试：</strong></p>
+<ul>
+<li>FuzzBench提供的harness作为测试对象</li>
+<li>ReZZan和ReZZan<sub>lite</sub>的性能略有下降</li>
+<li>结果表明：1. ReZZan可以应用于fork模式和持久模式；2. ReZZen在较长运行时间内的其性能最终将接近ASan</li>
+</ul>
+</li>
+<li><p><strong>可扩展性：</strong></p>
+<p><img src="/2023/01/10/ReZZan/15.png" srcset="/img/loading.gif" lazyload></p>
+<ul>
+<li><p>考虑到Firefox的规模，与其他基准相比，总体模糊吞吐量要慢得多。尽管如此，ReZZan和ReZZan<sub>lite</sub>仍以112.60%和114.86%的改善率优于ASan</p>
+</li>
+<li><p>证明ReZZan是可扩展的</p>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="RQ-six-误报"><a href="#RQ-six-误报" class="headerlink" title="RQ:six: 误报"></a>RQ<span class="github-emoji"><span>6⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0036-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 误报</h3><ul>
+<li>ReZZan设计允许少量误报</li>
+<li>实验包括超过19200小时（≈2.2年）CPU时间，在此期间没有观察到误报</li>
+<li>预期是数十年的CPU时间才可能观察到第一次误报</li>
+</ul>
+<h2 id="我的看法"><a href="#我的看法" class="headerlink" title="我的看法"></a>我的看法</h2><p><span class="github-emoji"><span>⭐</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/2b50.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 亮点：</p>
+<ul>
+<li>论文分析了现有Sanitizer与基于fork模式的模糊器结合时对模糊测试性能的影响，主要体现在：1. COW机制导致频繁的页错误；2.disjoint metadata，因此与fork()兼容性不好</li>
+<li>论文提出了基于RET和改进的细粒度边界检测的Sanitizer——ReZZan，并通过详细的实验论证ReZZan的性能</li>
+<li>实验部分很详细</li>
+<li>项目开源：<a target="_blank" rel="noopener" href="https://github.com/bajinsheng/ReZZan">https://github.com/bajinsheng/ReZZan</a></li>
+</ul>
+<p>不足：</p>
+<ul>
+<li>仅支持llvm-12，而且wrapper的一些细节处理不是很好</li>
+<li><strong>目测</strong>应该不会有ASan那么详细的错误报告，也就是说ReZZan仅会异常结束程序，还需要使用ASan查看具体是何种漏洞类型（待验证）</li>
+</ul>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E8%AE%BA%E6%96%87%E9%98%85%E8%AF%BB/">#论文阅读</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>ReZZan:Efficient Greybox Fuzzing to Detect Memory Errors</div>
+      <div>http://bladchan.github.io/2023/01/10/ReZZan/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>bladchan</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年1月10日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/03/09/AFLplusplus%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8F%98%E5%BC%82%E5%99%A8%E2%80%94%E6%BA%90%E7%A0%81%E7%BB%86%E8%8A%82/" title="AFLplusplus自定义变异器—源码细节">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">AFLplusplus自定义变异器—源码细节</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/12/27/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA%E5%89%96%E6%9E%90AFL%E6%8F%92%E6%A1%A9/" title="深入浅出AFL插桩">
+                        <span class="hidden-mobile">深入浅出AFL插桩</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+  <div id="gitalk-container"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#gitalk-container', function() {
+      Fluid.utils.createCssLink('/css/gitalk.css')
+      Fluid.utils.createScript('https://lib.baomitu.com/gitalk/1.8.0/gitalk.min.js', function() {
+        var options = Object.assign(
+          {"clientID":"8fb1902edd5e2f4640d4","clientSecret":"c33eb5a729e618f3b25f5ed31b89ab8190617364","repo":"blog_comments","owner":"bladchan","admin":["bladchan"],"language":"zh-CN","labels":["Gitalk"],"perPage":10,"pagerDirection":"last","distractionFreeMode":false,"createIssueManually":true,"proxy":"https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token"},
+          {
+            id: '4f1b0d781ae9823689fe0f8dbf06e88e'
+          }
+        )
+        var gitalk = new Gitalk(options);
+        gitalk.render('gitalk-container');
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Chan</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Powered by Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
