@@ -1,0 +1,869 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="bladchan">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="关于I&#x2F;O多路复用那些事Q1：为什么需要I&#x2F;O多路复用？[1] A1：  TCP Socket只能实现一对一通信 &#x3D;&#x3D;&gt; 同步阻塞（连接请求饥饿性）：read阻塞直到请求数据传送过来并write 🤔 如果没有I&#x2F;O多路复用，那如何更好服务更多的用户？  一个请求对应一个线程 &#x3D;&#x3D;&gt; 维护一个线程池 线程池的缺点：1）如何确定预先分配的线程池中线程的数量？如果分配少了，但连接数激增，可">
+<meta property="og:type" content="article">
+<meta property="og:title" content="关于Linux IO多路复用那些事">
+<meta property="og:url" content="http://bladchan.github.io/2023/07/10/%E5%85%B3%E4%BA%8ELinux%20IO%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8%E9%82%A3%E4%BA%9B%E4%BA%8B/index.html">
+<meta property="og:site_name" content="chan&#39;s blog">
+<meta property="og:description" content="关于I&#x2F;O多路复用那些事Q1：为什么需要I&#x2F;O多路复用？[1] A1：  TCP Socket只能实现一对一通信 &#x3D;&#x3D;&gt; 同步阻塞（连接请求饥饿性）：read阻塞直到请求数据传送过来并write 🤔 如果没有I&#x2F;O多路复用，那如何更好服务更多的用户？  一个请求对应一个线程 &#x3D;&#x3D;&gt; 维护一个线程池 线程池的缺点：1）如何确定预先分配的线程池中线程的数量？如果分配少了，但连接数激增，可">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://bladchan.github.io/image/IO-Multiplexing.png">
+<meta property="article:published_time" content="2023-07-10T09:55:00.000Z">
+<meta property="article:modified_time" content="2023-07-17T13:58:15.629Z">
+<meta property="article:author" content="bladchan">
+<meta property="article:tag" content="多路复用">
+<meta property="article:tag" content="Linux">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://bladchan.github.io/image/IO-Multiplexing.png">
+  
+  
+  
+  <title>关于Linux IO多路复用那些事 - chan&#39;s blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"bladchan.github.io","root":"/","version":"1.9.4","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.3.0">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+</head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Chan&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/">
+                <i class="iconfont icon-link-fill"></i>
+                <span>友链</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="关于Linux IO多路复用那些事"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-07-10 17:55" pubdate>
+          2023年7月10日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8.7k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          73 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">关于Linux IO多路复用那些事</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="关于I-x2F-O多路复用那些事"><a href="#关于I-x2F-O多路复用那些事" class="headerlink" title="关于I/O多路复用那些事"></a>关于I/O多路复用那些事</h1><p><strong>Q1：为什么需要I/O多路复用？</strong>[1]</p>
+<p><strong>A1：</strong></p>
+<ul>
+<li><p>TCP Socket只能实现一对一通信 ==&gt; 同步<strong>阻塞</strong>（连接请求饥饿性）：read阻塞直到请求数据传送过来并write</p>
+<p><span class="github-emoji"><span>🤔</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f914.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 如果没有I/O多路复用，那如何更好服务更多的用户？</p>
+<ul>
+<li>一个请求对应一个线程 ==&gt; 维护一个线程池</li>
+<li>线程池的缺点：1）如何确定预先分配的线程池中线程的数量？如果分配少了，但连接数激增，可能会导致程序直接崩溃或者上下文切换的开销太大导致程序<strong>运行效率很低</strong>；如果分配过多，但连接数很少，会导致已分配的线程得不到利用而造成<strong>资源浪费</strong></li>
+</ul>
+</li>
+<li><p>I/O（时分）多路复用：一个线程维护多个Socket</p>
+</li>
+</ul>
+<hr>
+<p><strong>Q2：如何进行I/O多路复用？</strong></p>
+<p><strong>A2：</strong></p>
+<ul>
+<li><p>使用一个操作系统机制来轮询一组文件描述符，在Linux中，主要有三种操作：<strong>select</strong>、<strong>poll</strong>和<strong>epoll</strong></p>
+</li>
+<li><p>Linux（Unix）操作系统内核提供给用户态的多路复用<strong>系统调用</strong>（select、poll、epoll），进程可以通过一个系统调用函数从内核中获取多个事件</p>
+</li>
+</ul>
+<hr>
+<h2 id="E1：Select系统调用"><a href="#E1：Select系统调用" class="headerlink" title="E1：Select系统调用"></a><strong>E1：Select系统调用</strong></h2><ul>
+<li><p>函数签名[3-4]：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs C"><span class="hljs-type">int</span> <span class="hljs-title function_">select</span><span class="hljs-params">(</span><br><span class="hljs-params">    <span class="hljs-type">int</span> nfds, 					<span class="hljs-comment">// 所允许设置的最大文件描述符值+1</span></span><br><span class="hljs-params">    fd_set *readfds,			<span class="hljs-comment">// 读文件描述符集合（select返回后，readfds仅保留那些准备读取的文件描述符）</span></span><br><span class="hljs-params">    fd_set *writefds,			<span class="hljs-comment">// 写文件描述符集合（select返回后，readfds仅保留那些准备写的文件描述符）</span></span><br><span class="hljs-params">    fd_set *exceptfds,			<span class="hljs-comment">// 监控异常条件（exceptional conditions）</span></span><br><span class="hljs-params">    <span class="hljs-keyword">struct</span> timeval *timeout		<span class="hljs-comment">// timeval结构体，用来描述超时信息（全0表示立刻返回，为NULL表示无限等待）</span></span><br><span class="hljs-params">)</span>;<br></code></pre></td></tr></tbody></table></figure>
+</li>
+<li><p><span class="github-emoji"><span>⭐</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/2b50.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> select()调用接触阻塞的条件：</p>
+<ul>
+<li>任意一个文件描述符准备好了</li>
+<li>调用被一个信号处理器所中断</li>
+<li>超时 [由参数timeout控制]</li>
+</ul>
+</li>
+<li><p>与fd_set操作有关的宏：</p>
+<ul>
+<li>**FD_ZERO()**：清空set</li>
+<li>**FD_SET()**：将fd添加到set中</li>
+<li>**FD_CLR()**：将fd从set中移除</li>
+<li>**FD_ISSET()**：可以在调用select()之后，检查某一个文件描述符是否仍然在一个集合中，返回非0表示该文件描述符在集合中，否则返回0</li>
+</ul>
+</li>
+<li><p><strong>pselect()</strong></p>
+<ul>
+<li><p>函数签名：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">int</span> <span class="hljs-title function_">pselect</span><span class="hljs-params">(<span class="hljs-type">int</span> nfds, fd_set *_Nullable <span class="hljs-keyword">restrict</span> readfds,</span><br><span class="hljs-params">                  fd_set *_Nullable <span class="hljs-keyword">restrict</span> writefds,</span><br><span class="hljs-params">                  fd_set *_Nullable <span class="hljs-keyword">restrict</span> exceptfds,</span><br><span class="hljs-params">                  <span class="hljs-type">const</span> <span class="hljs-keyword">struct</span> timespec *_Nullable <span class="hljs-keyword">restrict</span> timeout,</span><br><span class="hljs-params">                  <span class="hljs-type">const</span> <span class="hljs-type">sigset_t</span> *_Nullable <span class="hljs-keyword">restrict</span> sigmask)</span>;<br></code></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>提供额外一个信号掩码操作，允许更安全的调用select</p>
+</li>
+<li><p>与select()的区别：</p>
+<p>(1) 超时参数的结构体不一样：在<code>select()</code>中是<code>struct timeval</code>（秒+毫秒），而在<code>pselect()</code>中是<code>struct timespec</code>（秒+纳秒）</p>
+<p>(2) 是否修改timeout值：<code>select()</code>可能会将timeout值更新为还剩下的时间，而<code>pselect()</code>则不会修改</p>
+<p>(3) sigmask参数</p>
+</li>
+<li><p>与select()之间的等价表述：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs c">ready = pselect(nfds, &amp;readfds, &amp;writefds, &amp;exceptfds,<br>                           timeout, &amp;sigmask);<br><span class="hljs-comment">// Same as ---|:</span><br><span class="hljs-comment">//            v</span><br><span class="hljs-type">sigset_t</span> origmask;<br><br>pthread_sigmask(SIG_SETMASK, &amp;sigmask, &amp;origmask);<br>ready = select(nfds, &amp;readfds, &amp;writefds, &amp;exceptfds, timeout);<br>pthread_sigmask(SIG_SETMASK, &amp;origmask, <span class="hljs-literal">NULL</span>);<br></code></pre></td></tr></tbody></table></figure></li>
+</ul>
+</li>
+<li><p><span class="github-emoji"><span>🌰</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f330.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span>[2]</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;stdio.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;sys/types.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;sys/socket.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;netinet/in.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;wait.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;signal.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;errno.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;sys/select.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;sys/time.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;unistd.h&gt;</span></span><br><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> MAXBUF 256</span><br><br><span class="hljs-type">void</span> <span class="hljs-title function_">child_process</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span><br>{<br>  sleep(<span class="hljs-number">2</span>); <span class="hljs-comment">// make sure that server is started</span><br>  <span class="hljs-type">char</span> msg[MAXBUF];<br>  <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">sockaddr_in</span> <span class="hljs-title">addr</span> =</span> {<span class="hljs-number">0</span>};<br>  <span class="hljs-type">int</span> n, sockfd, num=<span class="hljs-number">1</span>;<br>  srandom(getpid());<br>  <span class="hljs-comment">/* Create socket and connect to server */</span><br>  sockfd = socket(AF_INET, SOCK_STREAM, <span class="hljs-number">0</span>);<br>  addr.sin_family = AF_INET;<br>  addr.sin_port = htons(<span class="hljs-number">2000</span>);<br>  addr.sin_addr.s_addr = inet_addr(<span class="hljs-string">"127.0.0.1"</span>);<br><br>  connect(sockfd, (<span class="hljs-keyword">struct</span> sockaddr*)&amp;addr, <span class="hljs-keyword">sizeof</span>(addr));<br><br>  <span class="hljs-built_in">printf</span>(<span class="hljs-string">"child {%d} connected \n"</span>, getpid());<br>  <span class="hljs-keyword">while</span>(<span class="hljs-number">1</span>){  <span class="hljs-comment">// dead loop</span><br>        <span class="hljs-type">int</span> sl = (random() % <span class="hljs-number">10</span>) +  <span class="hljs-number">1</span>;<br>        num++;<br>     	sleep(sl);<br>  	<span class="hljs-built_in">sprintf</span> (msg, <span class="hljs-string">"Test message %d from client %d"</span>, num, getpid());<br>  	n = write(sockfd, msg, <span class="hljs-built_in">strlen</span>(msg));	<span class="hljs-comment">/* Send message */</span><br>  }<br><br>}<br><br><span class="hljs-type">int</span> <span class="hljs-title function_">main</span><span class="hljs-params">()</span><br>{<br>  <span class="hljs-type">char</span> buffer[MAXBUF];<br>  <span class="hljs-type">int</span> fds[<span class="hljs-number">5</span>];<br>  <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">sockaddr_in</span> <span class="hljs-title">addr</span>;</span><br>  <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">sockaddr_in</span> <span class="hljs-title">client</span>;</span><br>  <span class="hljs-type">int</span> addrlen, n,i,max=<span class="hljs-number">0</span>;<br>  <span class="hljs-type">int</span> sockfd, commfd;<br>  fd_set rset;<br>  <span class="hljs-keyword">for</span>(i=<span class="hljs-number">0</span>;i&lt;<span class="hljs-number">5</span>;i++)<br>  {<br>  	<span class="hljs-keyword">if</span>(fork() == <span class="hljs-number">0</span>)<br>  	{<br>  		child_process();<br>  		<span class="hljs-built_in">exit</span>(<span class="hljs-number">0</span>);<br>  	}<br>  }<br><br>  sockfd = socket(AF_INET, SOCK_STREAM, <span class="hljs-number">0</span>);<br>  <span class="hljs-built_in">memset</span>(&amp;addr, <span class="hljs-number">0</span>, <span class="hljs-keyword">sizeof</span> (addr));<br>  addr.sin_family = AF_INET;<br>  addr.sin_port = htons(<span class="hljs-number">2000</span>);<br>  addr.sin_addr.s_addr = INADDR_ANY;<br>  bind(sockfd,(<span class="hljs-keyword">struct</span> sockaddr*)&amp;addr, <span class="hljs-keyword">sizeof</span>(addr));<br>  listen (sockfd, <span class="hljs-number">5</span>); <br><br>  <span class="hljs-keyword">for</span> (i=<span class="hljs-number">0</span>;i&lt;<span class="hljs-number">5</span>;i++) <br>  {<br>    <span class="hljs-built_in">memset</span>(&amp;client, <span class="hljs-number">0</span>, <span class="hljs-keyword">sizeof</span> (client));<br>    addrlen = <span class="hljs-keyword">sizeof</span>(client);<br>    fds[i] = accept(sockfd,(<span class="hljs-keyword">struct</span> sockaddr*)&amp;client, &amp;addrlen);<br>    <span class="hljs-keyword">if</span>(fds[i] &gt; max)<br>    	max = fds[i];<br>  }<br>  <br>  <span class="hljs-keyword">while</span>(<span class="hljs-number">1</span>){<br>	FD_ZERO(&amp;rset);<br>  	<span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i&lt; <span class="hljs-number">5</span>; i++ ) {<br>  		FD_SET(fds[i],&amp;rset);<br>  	}<br><br>   	<span class="hljs-built_in">puts</span>(<span class="hljs-string">"round again"</span>);<br>	select(max+<span class="hljs-number">1</span>, &amp;rset, <span class="hljs-literal">NULL</span>, <span class="hljs-literal">NULL</span>, <span class="hljs-literal">NULL</span>);<br><br>	<span class="hljs-keyword">for</span>(i=<span class="hljs-number">0</span>;i&lt;<span class="hljs-number">5</span>;i++) {<br>		<span class="hljs-keyword">if</span> (FD_ISSET(fds[i], &amp;rset)){ <span class="hljs-comment">// 如果文件描述符在这个集合里，意味着该文件描述符可读</span><br>			<span class="hljs-built_in">memset</span>(buffer,<span class="hljs-number">0</span>,MAXBUF);<br>			read(fds[i], buffer, MAXBUF);<br>			<span class="hljs-built_in">puts</span>(buffer);<br>		}<br>	}	<br>  }<br>  <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>}<br></code></pre></td></tr></tbody></table></figure>
+</li>
+<li><p><span class="github-emoji"><span>🤔</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f914.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 这里为什么需要传入nfds并告诉<code>select()</code>当前所有文件描述符中最大值+1？</p>
+<p><strong>A:</strong> 与fd_set的实现有关：每个fd表示为一个比特，fd_set是一个32个整数的数组，共1024比特；我们进一步假设有5个文件描述符，但最高的文件描述符值是900，那么函数将会检查从0到900的比特而不需要检查到1024</p>
+</li>
+</ul>
+<h3 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h3><ul>
+<li>在每一次调用之前，需要构造每一个集合（三个集合）</li>
+<li>函数逐位检查到最大文件描述符值 - 复杂度：O(n)</li>
+<li>需要在select调用之后检查文件描述符是否在select返回的集合中，如果在，则进行相应的处理</li>
+<li>select最多只能监听1024个文件描述符（底层使用BitsMap实现）</li>
+</ul>
+<h2 id="E2：Poll系统调用"><a href="#E2：Poll系统调用" class="headerlink" title="E2：Poll系统调用"></a>E2：Poll系统调用</h2><ul>
+<li><p>函数签名[5]：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">int</span> <span class="hljs-title function_">poll</span><span class="hljs-params">(</span><br><span class="hljs-params">    <span class="hljs-keyword">struct</span> pollfd *fds,</span><br><span class="hljs-params">    <span class="hljs-type">nfds_t</span> nfds,		<span class="hljs-comment">// fds数组元素个数！（注意这里与select()函数的区别）</span></span><br><span class="hljs-params">    <span class="hljs-type">int</span> timeout</span><br><span class="hljs-params">)</span>;<br><span class="hljs-type">int</span> <span class="hljs-title function_">ppoll</span><span class="hljs-params">(</span><br><span class="hljs-params">    <span class="hljs-keyword">struct</span> pollfd *fds, <span class="hljs-type">nfds_t</span> nfds,</span><br><span class="hljs-params">    <span class="hljs-type">const</span> <span class="hljs-keyword">struct</span> timespec *_Nullable tmo_p,</span><br><span class="hljs-params">    <span class="hljs-type">const</span> <span class="hljs-type">sigset_t</span> *_Nullable sigmask</span><br><span class="hljs-params">)</span>;<br><span class="hljs-comment">/* struct pollfd */</span><br><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">pollfd</span> {</span><br>    <span class="hljs-type">int</span>   fd;         <span class="hljs-comment">/* file descriptor */</span><br>    <span class="hljs-type">short</span> events;     <span class="hljs-comment">/* requested events */</span><br>    <span class="hljs-type">short</span> revents;    <span class="hljs-comment">/* returned events */</span><br>};<br><br></code></pre></td></tr></tbody></table></figure>
+</li>
+<li><p><code>poll()</code>调用阻塞接触逻辑与<code>select()</code>一样</p>
+</li>
+<li><p>在events和revents（poll.h）中定义的比特：</p>
+<ul>
+<li><strong>POLLIN</strong>：有数据要读</li>
+<li><strong>POLLPRI</strong>：文件描述符存在一些异常，可能包括：TCP socket中有带外数据等</li>
+<li><strong>POLLOUT</strong>：可写</li>
+<li><strong>POLLRDHUP</strong>：流socket关闭连接 or 连接途中关闭写操作</li>
+<li><strong>POLLERR</strong>：错误条件 *</li>
+<li><strong>POLLHUP</strong>：挂起 *</li>
+<li><strong>POLLNVAL</strong>：无效请求，fd未打开 *</li>
+</ul>
+<p>ps: * 表示只会出现在revents中</p>
+</li>
+<li><p><span class="github-emoji"><span>🌰</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f330.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 将上述<code>select()</code>示例代码进行相应的修改</p>
+<figure class="highlight c++"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;poll.h&gt;</span></span><br>...<br>    <span class="hljs-keyword">struct</span> <span class="hljs-title class_">pollfd</span> pollfds[<span class="hljs-number">5</span>];<br>    ...<br>    <span class="hljs-keyword">for</span> (i=<span class="hljs-number">0</span>;i&lt;<span class="hljs-number">5</span>;i++) <br>    {<br>        <span class="hljs-built_in">memset</span>(&amp;client, <span class="hljs-number">0</span>, <span class="hljs-built_in">sizeof</span> (client));<br>        addrlen = <span class="hljs-built_in">sizeof</span>(client);<br>        pollfds[i].fd = <span class="hljs-built_in">accept</span>(sockfd,(<span class="hljs-keyword">struct</span> sockaddr*)&amp;client, &amp;addrlen);<br>        pollfds[i].events = POLLIN;<br>    }<br>    <span class="hljs-built_in">sleep</span>(<span class="hljs-number">1</span>);<br>    <span class="hljs-keyword">while</span>(<span class="hljs-number">1</span>){<br>        <span class="hljs-built_in">puts</span>(<span class="hljs-string">"round again"</span>);<br>        <span class="hljs-built_in">poll</span>(pollfds, <span class="hljs-number">5</span>, <span class="hljs-number">50000</span>);<br><br>        <span class="hljs-keyword">for</span>(i=<span class="hljs-number">0</span>;i&lt;<span class="hljs-number">5</span>;i++) {<br>            <span class="hljs-keyword">if</span> (pollfds[i].revents &amp; POLLIN){<br>                pollfds[i].revents = <span class="hljs-number">0</span>;<br>                <span class="hljs-built_in">memset</span>(buffer,<span class="hljs-number">0</span>,MAXBUF);<br>                <span class="hljs-built_in">read</span>(pollfds[i].fd, buffer, MAXBUF);<br>                <span class="hljs-built_in">puts</span>(buffer);<br>            }<br>        }<br>    }<br>    ...<br></code></pre></td></tr></tbody></table></figure>
+
+<p>运行结果：</p>
+<p><img src="/2023/07/10/%E5%85%B3%E4%BA%8ELinux%20IO%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8%E9%82%A3%E4%BA%9B%E4%BA%8B/1.png" srcset="/img/loading.gif" lazyload></p>
+</li>
+</ul>
+<h3 id="小结-1"><a href="#小结-1" class="headerlink" title="小结"></a>小结</h3><p>**poll() <span class="github-emoji"><span>🆚</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f19a.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> select(): **</p>
+<ul>
+<li><p><code>poll()</code>不需要使用者计算最大文件描述符值+1的值。</p>
+</li>
+<li><p><code>poll()</code>对于大数值的文件描述符来说更有效。仍然假设最大值为900的五个文件描述符，<code>poll()</code>仅需遍历5次，而使用<code>select()</code>则需要遍历900次</p>
+</li>
+<li><p><code>select()</code>的文件描述符集合是定长的（1024）</p>
+</li>
+<li><p>在<code>select()</code>中，文件描述符集合在返回时重新构建，因此随后每一次调用时都需要重新初始化他们：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><code class="hljs c"> <span class="hljs-keyword">while</span>(<span class="hljs-number">1</span>){<br>FD_ZERO(&amp;rset);<br> 	<span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i&lt; <span class="hljs-number">5</span>; i++ ) {<br> 		FD_SET(fds[i],&amp;rset);   <span class="hljs-comment">// &lt;================= 重新初始化！</span><br> 	}<br>  <br>  	<span class="hljs-built_in">puts</span>(<span class="hljs-string">"round again"</span>);<br>select(max+<span class="hljs-number">1</span>, &amp;rset, <span class="hljs-literal">NULL</span>, <span class="hljs-literal">NULL</span>, <span class="hljs-literal">NULL</span>);<br>  <br><span class="hljs-keyword">for</span>(i=<span class="hljs-number">0</span>;i&lt;<span class="hljs-number">5</span>;i++) {<br>	<span class="hljs-keyword">if</span> (FD_ISSET(fds[i], &amp;rset)){ <span class="hljs-comment">// 如果文件描述符在这个集合里，意味着该文件描述符可读</span><br>		<span class="hljs-built_in">memset</span>(buffer,<span class="hljs-number">0</span>,MAXBUF);<br>		read(fds[i], buffer, MAXBUF);<br>		<span class="hljs-built_in">puts</span>(buffer);<br>	}<br>}	<br> }<br></code></pre></td></tr></tbody></table></figure>
+
+<p>而<code>poll()</code>将输入（events字段）和输出（revents字段）分隔开，允许数组重新使用（这里可以理解为<strong>生产者消费者模式</strong>）：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-keyword">while</span>(<span class="hljs-number">1</span>){<br>    <span class="hljs-built_in">puts</span>(<span class="hljs-string">"round again"</span>);<br>    poll(pollfds, <span class="hljs-number">5</span>, <span class="hljs-number">50000</span>);			  <span class="hljs-comment">// &lt;================== 生产revent</span><br>  <br>    <span class="hljs-keyword">for</span>(i=<span class="hljs-number">0</span>;i&lt;<span class="hljs-number">5</span>;i++) {<br>        <span class="hljs-keyword">if</span> (pollfds[i].revents &amp; POLLIN){<br>            pollfds[i].revents = <span class="hljs-number">0</span>;        <span class="hljs-comment">// &lt;================= 消费了，清空revent</span><br>            <span class="hljs-built_in">memset</span>(buffer,<span class="hljs-number">0</span>,MAXBUF);<br>            read(pollfds[i].fd, buffer, MAXBUF);<br>            <span class="hljs-built_in">puts</span>(buffer);<br>        }<br>    }<br>}<br></code></pre></td></tr></tbody></table></figure>
+</li>
+<li><p><code>select()</code>更加具有可移植性，因为某些Unix系统不支持<code>poll()</code></p>
+</li>
+</ul>
+<p><span class="github-emoji"><span>🤔</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f914.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 再深入思考一下，<code>select()</code>和<code>poll()</code>最本质的区别其实是数据结构上的调整，<code>select()</code>使用了<strong>三个数组来分别维护</strong>读描述符、写描述符和异常处理描述符，而<code>poll()</code>仅使用了<strong>一个数组来维护文件描述符</strong>，但是使用了自定义的一个名为pollfds的结构体存储文件描述符信息，而<strong>该结构体中的event字段描述了文件描述符的类型</strong>。</p>
+<h2 id="E3-Epoll系统调用"><a href="#E3-Epoll系统调用" class="headerlink" title="E3: Epoll系统调用"></a>E3: Epoll系统调用</h2><ul>
+<li><p>函数签名[7-9]：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;sys/epoll.h&gt;</span></span><br><br><span class="hljs-type">int</span> <span class="hljs-title function_">epoll_create</span><span class="hljs-params">(<span class="hljs-type">int</span> size)</span>;<br><span class="hljs-type">int</span> <span class="hljs-title function_">epoll_create1</span><span class="hljs-params">(<span class="hljs-type">int</span> flags)</span>;<br><br><span class="hljs-type">int</span> <span class="hljs-title function_">epoll_ctl</span><span class="hljs-params">(<span class="hljs-type">int</span> epfd, <span class="hljs-type">int</span> op, <span class="hljs-type">int</span> fd, <span class="hljs-keyword">struct</span> epoll_event *_Nullable event)</span>;<br><br><span class="hljs-type">int</span> <span class="hljs-title function_">epoll_wait</span><span class="hljs-params">(<span class="hljs-type">int</span> epfd, <span class="hljs-keyword">struct</span> epoll_event *events, <span class="hljs-type">int</span> maxevents, <span class="hljs-type">int</span> timeout)</span>;<br><span class="hljs-type">int</span> <span class="hljs-title function_">epoll_pwait</span><span class="hljs-params">(<span class="hljs-type">int</span> epfd, <span class="hljs-keyword">struct</span> epoll_event *events, <span class="hljs-type">int</span> maxevents, <span class="hljs-type">int</span> timeout, <span class="hljs-type">const</span> <span class="hljs-type">sigset_t</span> *_Nullable sigmask)</span>;<br><span class="hljs-type">int</span> <span class="hljs-title function_">epoll_pwait2</span><span class="hljs-params">(<span class="hljs-type">int</span> epfd, <span class="hljs-keyword">struct</span> epoll_event *events, <span class="hljs-type">int</span> maxevents, </span><br><span class="hljs-params">                 <span class="hljs-type">const</span> <span class="hljs-keyword">struct</span> timespec *_Nullable timeout, <span class="hljs-type">const</span> <span class="hljs-type">sigset_t</span> *_Nullable sigmask)</span>;<br><br><span class="hljs-comment">// event structure</span><br><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">epoll_event</span> {</span><br>     <span class="hljs-type">uint32_t</span>      events;  <span class="hljs-comment">/* Epoll events */</span><br>     <span class="hljs-type">epoll_data_t</span>  data;    <span class="hljs-comment">/* User data variable */</span><br>};<br><br><span class="hljs-class"><span class="hljs-keyword">union</span> <span class="hljs-title">epoll_data</span> {</span><br>     <span class="hljs-type">void</span>     *ptr;<br>     <span class="hljs-type">int</span>       fd;<br>     <span class="hljs-type">uint32_t</span>  u32;<br>     <span class="hljs-type">uint64_t</span>  u64;<br>};<br></code></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>epoll API核心概念是epoll实例，其是一个内核数据结构，从用户空间的角度来看，它可以被看做是<strong>两个列表</strong>的容器[6]：</p>
+<ul>
+<li>interest list（有时也被称作epoll set）：进程注册监视的文件描述符集合</li>
+<li>ready list：已经准备好用于I/O操作的文件描述符集合，是interest list的一个子集</li>
+</ul>
+</li>
+<li><p>创建并管理epoll实例的系统调用有：</p>
+<ol>
+<li>epoll_create（epoll_create1）：在内核中创建一个上下文（i.e. 实例）</li>
+<li>epoll_ctl：从上下文中添加或者删除文件描述符</li>
+<li>epoll_wait： 等待上下文中的事件</li>
+</ol>
+</li>
+<li><p>水平触发（Level-triggered，<strong>LT</strong>） 和 边缘触发（edge-triggered，<strong>ET</strong>）</p>
+<ul>
+<li><p>两种事件触发机制</p>
+</li>
+<li><p>假设一个场景：</p>
+<ol>
+<li>在管道的<strong>读</strong>方的文件描述符 (rfd) 已经被注册到epoll实例中</li>
+<li>在管道另一个写方往管道中写入2KB的数据</li>
+<li>调用epoll_wait()，其将返回rfd作为就绪文件描述符</li>
+<li>管道读方从rfd中读入1KB数据</li>
+<li>再次调用epoll_wait()</li>
+</ol>
+<p>如果在上述场景中rfd文件描述符添加了<code>EPOLLET</code>（边缘触发）的标志，那么在Step 5中的<code>epoll_wait()</code>将会被阻塞，尽管管道中还有1KB字节未读。原因在于边缘触发仅在<strong>被监控的文件描述符发生改变时</strong>才会传递事件；当使用一个水平触发机制时（默认，不指定<code>EPOLLET</code>），服务器端不断地从<code>epoll_wait()</code>调用中唤醒，直到内核缓冲区被读完才结束。这样能保证让我们知道有哪些数据需要读取。</p>
+</li>
+</ul>
+</li>
+<li><p><span class="github-emoji"><span>🌰</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f330.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 修改上述的例子：</p>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;sys/epoll.h&gt;</span></span><br>...<br><br>  <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">epoll_event</span> <span class="hljs-title">events</span>[5];</span><br>  <span class="hljs-type">int</span> epfd = epoll_create(<span class="hljs-number">10</span>);<br>  ...<br>  ...<br>  <span class="hljs-keyword">for</span> (i=<span class="hljs-number">0</span>;i&lt;<span class="hljs-number">5</span>;i++) <br>  {<br>    <span class="hljs-type">static</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">epoll_event</span> <span class="hljs-title">ev</span>;</span><br>    <span class="hljs-built_in">memset</span>(&amp;client, <span class="hljs-number">0</span>, <span class="hljs-keyword">sizeof</span> (client));<br>    addrlen = <span class="hljs-keyword">sizeof</span>(client);<br>    ev.data.fd = accept(sockfd,(<span class="hljs-keyword">struct</span> sockaddr*)&amp;client, &amp;addrlen);<br>    ev.events = EPOLLIN;<br>    epoll_ctl(epfd, EPOLL_CTL_ADD, ev.data.fd, &amp;ev);  <span class="hljs-comment">// 将事件添加到epoll实例中</span><br>  }<br>  <br>  <span class="hljs-keyword">while</span>(<span class="hljs-number">1</span>){<br>  	<span class="hljs-built_in">puts</span>(<span class="hljs-string">"round again"</span>);<br>  	nfds = epoll_wait(epfd, events, <span class="hljs-number">5</span>, <span class="hljs-number">10000</span>);		   <span class="hljs-comment">// wait</span><br>	<br>	<span class="hljs-keyword">for</span>(i=<span class="hljs-number">0</span>;i&lt;nfds;i++) {							   <span class="hljs-comment">// 遍历就绪事件，就绪事件已更新到events中，取出相应的文件描述符</span><br>			<span class="hljs-built_in">memset</span>(buffer,<span class="hljs-number">0</span>,MAXBUF);<br>			read(events[i].data.fd, buffer, MAXBUF);<br>			<span class="hljs-built_in">puts</span>(buffer);<br>	}<br>  }<br></code></pre></td></tr></tbody></table></figure></li>
+</ul>
+<h3 id="小结-2"><a href="#小结-2" class="headerlink" title="小结"></a>小结</h3><p><strong>Epoll() <span class="github-emoji"><span>🆚</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f19a.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> Select()/Poll()</strong></p>
+<ul>
+<li><p><code>select()</code>/<code>poll()</code>仅提供一个API（当然也提供了一些宏定义），而<code>epoll()</code>提供了三个API</p>
+</li>
+<li><table>
+<thead>
+<tr>
+<th>[10]</th>
+<th><code>select()</code></th>
+<th><code>poll()</code></th>
+<th><code>epoll()</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>最大连接数</strong></td>
+<td>1024<br>【数组】</td>
+<td>与操作系统有关<br>【链表】</td>
+<td>与操作系统有关<br></td>
+</tr>
+<tr>
+<td><strong>FD激增后带来的I/O效率问题</strong></td>
+<td>O(n) 线性下降</td>
+<td>O(n) 线性下降</td>
+<td>与活跃socket数据有关</td>
+</tr>
+<tr>
+<td><strong>消息传递方式</strong></td>
+<td>内核需要将消息传递到用户空间，<br>都需要内核拷贝动作</td>
+<td>同<code>select()</code></td>
+<td>通过内核和用户空间共享一块内存来实现的<br>mmap()文件映射内存加速与内核空间的消息传递</td>
+</tr>
+<tr>
+<td><strong>遍历就绪文件描述符的方式</strong></td>
+<td>基于轮询机制</td>
+<td>基于轮询机制</td>
+<td>基于操作系统的I/O通知机制</td>
+</tr>
+</tbody></table>
+</li>
+<li><p><code>epoll()</code>仅支持linux，跨平台可能存在不兼容的问题</p>
+</li>
+</ul>
+<h2 id="link-Reference"><a href="#link-Reference" class="headerlink" title=":link: Reference:"></a><span class="github-emoji"><span>🔗</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f517.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> Reference:</h2><ol>
+<li><a target="_blank" rel="noopener" href="https://juejin.cn/post/7243609307856683067">I/O多路复用的三种实现 - 掘金 (juejin.cn)</a></li>
+<li><a target="_blank" rel="noopener" href="https://devarea.com/linux-io-multiplexing-select-vs-poll-vs-epoll/">Linux – IO Multiplexing – Select vs Poll vs Epoll – Developers Area (devarea.com)</a></li>
+<li><a target="_blank" rel="noopener" href="https://linux.die.net/man/2/select">select(2): synchronous I/O multiplexing - Linux man page (die.net)</a></li>
+<li><a target="_blank" rel="noopener" href="https://man7.org/linux/man-pages/man2/select.2.html">select(2) - Linux manual page (man7.org)</a></li>
+<li><a target="_blank" rel="noopener" href="https://man7.org/linux/man-pages/man2/poll.2.html">poll(2) - Linux manual page (man7.org)</a></li>
+<li><a target="_blank" rel="noopener" href="https://man7.org/linux/man-pages/man7/epoll.7.html">https://man7.org/linux/man-pages/man7/epoll.7.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://man7.org/linux/man-pages/man2/epoll_create.2.html">https://man7.org/linux/man-pages/man2/epoll_create.2.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://man7.org/linux/man-pages/man2/epoll_ctl.2.html">https://man7.org/linux/man-pages/man2/epoll_ctl.2.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://man7.org/linux/man-pages/man2/epoll_wait.2.html">https://man7.org/linux/man-pages/man2/epoll_wait.2.html</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_41951923/article/details/107886934">select、poll和epoll_epoll最大连接数_Cudi_的博客-CSDN博客</a></li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8/">#多路复用</a>
+      
+        <a href="/tags/Linux/">#Linux</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>关于Linux IO多路复用那些事</div>
+      <div>http://bladchan.github.io/2023/07/10/关于Linux IO多路复用那些事/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>bladchan</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年7月10日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/04/20/AFLplusplus-cmplog%E6%8F%92%E6%A1%A9%E8%A7%A3%E6%9E%90/" title="AFLplusplus cmplog插桩解析">
+                        <span class="hidden-mobile">AFLplusplus cmplog插桩解析</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+  <div id="gitalk-container"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#gitalk-container', function() {
+      Fluid.utils.createCssLink('/css/gitalk.css')
+      Fluid.utils.createScript('https://lib.baomitu.com/gitalk/1.8.0/gitalk.min.js', function() {
+        var options = Object.assign(
+          {"clientID":"8fb1902edd5e2f4640d4","clientSecret":"c33eb5a729e618f3b25f5ed31b89ab8190617364","repo":"blog_comments","owner":"bladchan","admin":["bladchan"],"language":"zh-CN","labels":["Gitalk"],"perPage":10,"pagerDirection":"last","distractionFreeMode":false,"createIssueManually":true,"proxy":"https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token"},
+          {
+            id: '1f5f70ada71fca9dd2628804aefce3e7'
+          }
+        )
+        var gitalk = new Gitalk(options);
+        gitalk.render('gitalk-container');
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Chan</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Powered by Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

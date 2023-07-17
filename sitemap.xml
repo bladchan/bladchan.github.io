@@ -2,6 +2,15 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://bladchan.github.io/2023/07/10/%E5%85%B3%E4%BA%8ELinux%20IO%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8%E9%82%A3%E4%BA%9B%E4%BA%8B/</loc>
+    
+    <lastmod>2023-07-17</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
     <loc>http://bladchan.github.io/2023/01/10/ReZZan/</loc>
     
     <lastmod>2023-05-02</lastmod>
@@ -139,7 +148,7 @@
 
   <url>
     <loc>http://bladchan.github.io/</loc>
-    <lastmod>2023-05-02</lastmod>
+    <lastmod>2023-07-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
@@ -147,42 +156,56 @@
   
   <url>
     <loc>http://bladchan.github.io/tags/%E6%A8%A1%E7%B3%8A%E6%B5%8B%E8%AF%95/</loc>
-    <lastmod>2023-05-02</lastmod>
+    <lastmod>2023-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>http://bladchan.github.io/tags/AFL/</loc>
-    <lastmod>2023-05-02</lastmod>
+    <lastmod>2023-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>http://bladchan.github.io/tags/%E5%8D%8F%E8%AE%AEfuzz/</loc>
-    <lastmod>2023-05-02</lastmod>
+    <lastmod>2023-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>http://bladchan.github.io/tags/%E5%B7%A5%E5%85%B7/</loc>
-    <lastmod>2023-05-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
-    <loc>http://bladchan.github.io/tags/AFL/</loc>
-    <lastmod>2023-05-02</lastmod>
+    <lastmod>2023-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>http://bladchan.github.io/tags/%E8%AE%BA%E6%96%87%E9%98%85%E8%AF%BB/</loc>
-    <lastmod>2023-05-02</lastmod>
+    <lastmod>2023-07-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>http://bladchan.github.io/tags/%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8/</loc>
+    <lastmod>2023-07-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>http://bladchan.github.io/tags/Linux/</loc>
+    <lastmod>2023-07-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>http://bladchan.github.io/tags/AFL/</loc>
+    <lastmod>2023-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
