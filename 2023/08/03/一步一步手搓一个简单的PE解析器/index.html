@@ -1,0 +1,1716 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/image/favicon.png">
+  <link rel="icon" href="/image/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="bladchan">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="一步一步”手搓“一个简单的PE解析器 本文主要通过编写一个简单的PE解析器来加强对于PE结构的理解 项目地址：bladchan&#x2F;Simple-PE-Parser: A simple tool for parsing PE file (github.com)  Step 0: 预备工作 了解PE文件结构，参考资料[1-7]均介绍了PE的结构，这里不再赘述 winnt.h，该头文件包含了很多PE文件格">
+<meta property="og:type" content="article">
+<meta property="og:title" content="一步一步”手搓“一个简单的PE解析器">
+<meta property="og:url" content="http://bladchan.github.io/2023/08/03/%E4%B8%80%E6%AD%A5%E4%B8%80%E6%AD%A5%E6%89%8B%E6%90%93%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84PE%E8%A7%A3%E6%9E%90%E5%99%A8/index.html">
+<meta property="og:site_name" content="chan&#39;s blog">
+<meta property="og:description" content="一步一步”手搓“一个简单的PE解析器 本文主要通过编写一个简单的PE解析器来加强对于PE结构的理解 项目地址：bladchan&#x2F;Simple-PE-Parser: A simple tool for parsing PE file (github.com)  Step 0: 预备工作 了解PE文件结构，参考资料[1-7]均介绍了PE的结构，这里不再赘述 winnt.h，该头文件包含了很多PE文件格">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://bladchan.github.io/image/pe.png">
+<meta property="article:published_time" content="2023-08-03T14:33:33.000Z">
+<meta property="article:modified_time" content="2023-08-03T14:41:04.646Z">
+<meta property="article:author" content="bladchan">
+<meta property="article:tag" content="PE">
+<meta property="article:tag" content="Windows">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://bladchan.github.io/image/pe.png">
+  
+  
+  
+  <title>一步一步”手搓“一个简单的PE解析器 - chan&#39;s blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"bladchan.github.io","root":"/","version":"1.9.4","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.3.0">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+</head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Chan&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/links/">
+                <i class="iconfont icon-link-fill"></i>
+                <span>友链</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="一步一步”手搓“一个简单的PE解析器"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-08-03 22:33" pubdate>
+          2023年8月3日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          41k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          343 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">一步一步”手搓“一个简单的PE解析器</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="一步一步”手搓“一个简单的PE解析器"><a href="#一步一步”手搓“一个简单的PE解析器" class="headerlink" title="一步一步”手搓“一个简单的PE解析器"></a>一步一步”手搓“一个简单的PE解析器</h1><ul>
+<li>本文主要通过编写一个简单的PE解析器来加强对于PE结构的理解</li>
+<li>项目地址：<a target="_blank" rel="noopener" href="https://github.com/bladchan/Simple-PE-Parser">bladchan/Simple-PE-Parser: A simple tool for parsing PE file (github.com)</a></li>
+</ul>
+<h2 id="Step-0-预备工作"><a href="#Step-0-预备工作" class="headerlink" title="Step 0: 预备工作"></a>Step 0: 预备工作</h2><ul>
+<li>了解PE文件结构，参考资料[1-7]均介绍了PE的结构，这里不再赘述</li>
+<li><code>winnt.h</code>，该头文件包含了很多PE文件格式中的结构体：<a target="_blank" rel="noopener" href="https://github.com/Alexpux/mingw-w64/blob/master/mingw-w64-tools/widl/include/winnt.h">https://github.com/Alexpux/mingw-w64/blob/master/mingw-w64-tools/widl/include/winnt.h</a></li>
+<li>开源项目：<a target="_blank" rel="noopener" href="https://github.com/hasherezade/pe-bear">https://github.com/hasherezade/pe-bear</a></li>
+</ul>
+<h2 id="Step-1-简单的识别PE文件与其类型"><a href="#Step-1-简单的识别PE文件与其类型" class="headerlink" title="Step 1: 简单的识别PE文件与其类型"></a>Step 1: 简单的识别PE文件与其类型</h2><ul>
+<li><p>本节主要解决一个事，那就是确定给定的文件是否是一个PE文件</p>
+</li>
+<li><p>一个PE文件至少要满足两个条件：</p>
+<ul>
+<li><code>DOS Header</code>的标志<code>MZ</code><ul>
+<li>识别：文件前两个字节对应<code>MZ</code>的ASCII（0x5A4D）</li>
+<li><img src="/2023/08/03/%E4%B8%80%E6%AD%A5%E4%B8%80%E6%AD%A5%E6%89%8B%E6%90%93%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84PE%E8%A7%A3%E6%9E%90%E5%99%A8/1.png" srcset="/img/loading.gif" lazyload></li>
+</ul>
+</li>
+<li><code>NT Header</code>的标志<code>PE</code><ul>
+<li>识别：1. 获取DOS Header的指向<code>NT Headers</code>首部的偏移值；2. 取出前四个字节，并判断是否为<code>50 45 00 00</code>；</li>
+<li><img src="/2023/08/03/%E4%B8%80%E6%AD%A5%E4%B8%80%E6%AD%A5%E6%89%8B%E6%90%93%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84PE%E8%A7%A3%E6%9E%90%E5%99%A8/2.png" srcset="/img/loading.gif" lazyload></li>
+<li><img src="/2023/08/03/%E4%B8%80%E6%AD%A5%E4%B8%80%E6%AD%A5%E6%89%8B%E6%90%93%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84PE%E8%A7%A3%E6%9E%90%E5%99%A8/3.png" srcset="/img/loading.gif" lazyload></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>接下来判断一下PE文件的类型，主要是通过<code>NT Headers</code>的<code>Optional Header</code>进行识别：</p>
+<ul>
+<li><code>Optional Header</code>：<ul>
+<li>主要看Magic字段（两个字节）：<code>0x10b ==&gt; NT32</code>，<code>0x20b ==&gt; NT64</code></li>
+<li><img src="/2023/08/03/%E4%B8%80%E6%AD%A5%E4%B8%80%E6%AD%A5%E6%89%8B%E6%90%93%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84PE%E8%A7%A3%E6%9E%90%E5%99%A8/4.png" srcset="/img/loading.gif" lazyload></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<hr>
+<ul>
+<li>代码：</li>
+</ul>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">pe_validate</span><span class="hljs-params">(FILE* file)</span> </span>{<br>	<span class="hljs-comment">/*  </span><br><span class="hljs-comment">	*  此函数用于检查传入文件是否为PE文件</span><br><span class="hljs-comment">	*  参数1是传入的PE文件FILE指针</span><br><span class="hljs-comment">	*  返回值：-1表示文件损坏（针对PE文件来说）；0表示不是合法的PE文件；否则返回PE文件的类型（32 -&gt; PE32; 64 -&gt; PE+/PE32+; 1 -&gt; ROM?）</span><br><span class="hljs-comment">	*/</span><br><br>	__IMAGE_DOS_HEADER dos_header;<br>	DWORD sig;<br>	WORD pefile_type;<br><br>	<span class="hljs-built_in">fseek</span>(file, <span class="hljs-number">0</span>, SEEK_SET);<br>	<span class="hljs-type">size_t</span> read_size = <span class="hljs-built_in">fread</span>(&amp;dos_header, <span class="hljs-built_in">sizeof</span>(__IMAGE_DOS_HEADER), <span class="hljs-number">1</span>, file);<br><br>	<span class="hljs-keyword">if</span> (read_size != <span class="hljs-number">1</span>)<br>		<span class="hljs-keyword">return</span> <span class="hljs-number">-1</span>;<br><br>	<span class="hljs-comment">// 检查PE文件的MS标志</span><br>	<span class="hljs-keyword">if</span> (dos_header.e_magic != ___IMAGE_DOS_SIGNATURE) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Not a PE file.\n"</span>);<br>		<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>	}<br><br>	<span class="hljs-comment">// 检查NT Header的PE标志</span><br>	<span class="hljs-keyword">if</span> (<span class="hljs-built_in">fseek</span>(file, dos_header.e_lfanew, SEEK_SET)) <span class="hljs-keyword">return</span> <span class="hljs-number">-1</span>;<br>	<span class="hljs-built_in">fread</span>(&amp;sig, <span class="hljs-built_in">sizeof</span>(DWORD), <span class="hljs-number">1</span>, file);<br>	<span class="hljs-keyword">if</span> (sig != ___IMAGE_NT_SIGNATURE) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Not a PE file.\n"</span>);<br>		<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>	}<br><br>	<span class="hljs-keyword">if</span> (<span class="hljs-built_in">fseek</span>(file, dos_header.e_lfanew + <span class="hljs-built_in">sizeof</span>(DWORD) + <span class="hljs-built_in">sizeof</span>(___IMAGE_FILE_HEADER), SEEK_SET)) <span class="hljs-keyword">return</span> <span class="hljs-number">-1</span>;<br>	read_size = <span class="hljs-built_in">fread</span>(&amp;pefile_type, <span class="hljs-built_in">sizeof</span>(WORD), <span class="hljs-number">1</span>, file);<br><br>	<span class="hljs-keyword">if</span> (read_size != <span class="hljs-number">1</span>) <span class="hljs-keyword">return</span> <span class="hljs-number">-1</span>;<br>	<span class="hljs-comment">// 匹配PE文件的类型</span><br>	<span class="hljs-keyword">switch</span> (pefile_type) {<br>		<span class="hljs-keyword">case</span> ___IMAGE_NT_OPTIONAL_HDR32_MAGIC:<br>			<span class="hljs-keyword">return</span> <span class="hljs-number">32</span>;<br>		<span class="hljs-keyword">case</span> ___IMAGE_NT_OPTIONAL_HDR64_MAGIC:<br>			<span class="hljs-keyword">return</span> <span class="hljs-number">64</span>;<br>		<span class="hljs-keyword">case</span> ___IMAGE_ROM_OPTIONAL_HDR_MAGIC:<br>			<span class="hljs-keyword">return</span> <span class="hljs-number">1</span>;<br>		<span class="hljs-keyword">default</span>: {<br>			<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error when parsing ___IMAGE_OPTIONAL_HEADER.Magic. Unknown Type.\n"</span>);<br>			<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>		}<br>	}<br><br>	<span class="hljs-keyword">return</span> <span class="hljs-number">-1</span>;<br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>测试：</li>
+</ul>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>{<br>    FILE* fp;<br>    <span class="hljs-built_in">fopen_s</span>(&amp;fp, <span class="hljs-string">"PATH_TO_PE_FILE"</span>, <span class="hljs-string">"r"</span>);<br>    std::cout &lt;&lt; <span class="hljs-built_in">pe_validate</span>(fp) &lt;&lt; <span class="hljs-string">'\n'</span>;<br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<p>输出结果为64，表示该PE文件类型为<code>PE32+</code></p>
+<h2 id="Step-2-解析PE32文件头"><a href="#Step-2-解析PE32文件头" class="headerlink" title="Step 2: 解析PE32文件头"></a>Step 2: 解析PE32文件头</h2><ul>
+<li><p><code>PE32</code>和<code>PE32+</code>仅在位长上存在差异，整体处理逻辑是无任何区别的；</p>
+</li>
+<li><p><code>PE32</code>文件主要包括的结构有：</p>
+<ul>
+<li><code>DOS header</code></li>
+<li><code>DOS Stub (Rich Header)</code></li>
+<li><code>NT Headers (File Header、Optional Header)</code></li>
+<li><code>Section Headers</code></li>
+<li>…（请注意，我们这里仅仅是设计一个简单的解析器，解析的功能可能并不完善，仅用于加深对PE文件格式的理解）</li>
+</ul>
+</li>
+<li><p><code>PE32</code>文件结构类的设计：</p>
+</li>
+</ul>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-keyword">class</span> <span class="hljs-title class_">PE32</span> {<br><span class="hljs-keyword">public</span>:<br>	<span class="hljs-built_in">PE32</span>(<span class="hljs-type">char</span>*, FILE*);<br><br>	<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">print_info</span><span class="hljs-params">()</span></span>;<br><br><span class="hljs-keyword">private</span>:<br>	<span class="hljs-comment">// 基础的成员变量</span><br>	<span class="hljs-type">char</span>* file_path;<br>	FILE* pe_fp;<br><br>	<span class="hljs-comment">// PE相关头</span><br>	___IMAGE_DOS_HEADER         pe_dos_header;<br>	___IMAGE_NT_HEADERS32       pe_nt_headers_32;<br>	___PIMAGE_OPTIONAL_HEADER32 nt_optional_headers;<br>	___PIMAGE_SECTION_HEADER    section_headers;<br>	___PIMAGE_IMPORT_DESCRIPTOR import_dir_table_entries;<br>	___IMAGE_EXPORT_DIRECTORY   export_dir_table;<br>	___PIMAGE_BASE_RELOCATION   basereloc_table;<br>	___IMAGE_RESOURCE_DIRECTORY resource_dir_root;<br><br>	<span class="hljs-comment">// PE相关头中的偏移量和变量</span><br>	WORD  nt_headers_machine;<br>	LONG  nt_headers_offset;<br>	WORD  nt_sections_cnt;<br>	WORD  nt_optional_header_size;<br>	WORD  nt_characteristics;<br>	DWORD pe_header_size;<br>	DWORD import_dir_table_rva;<br>	DWORD import_dir_table_size;<br>	DWORD export_dir_table_rva;<br>	DWORD export_dir_table_size;<br>	DWORD basereloc_dir_table_rva;<br>	DWORD basereloc_dir_table_size;<br>	DWORD resource_dir_table_rva;<br>	DWORD resource_dir_table_size;<br><br>	<span class="hljs-comment">// 辅助变量</span><br>	DWORD import_dir_table_entries_num;<br>	DWORD basereloc_table_num;<br><br>	<span class="hljs-comment">// 与Rich headers有关的相关变量</span><br>	RICH_HEADER rich_headers;<br><br>	<span class="hljs-comment">// 辅助函数，用于转化相关地址</span><br>	<span class="hljs-function">DWORD <span class="hljs-title">va_to_raw</span><span class="hljs-params">(DWORD)</span></span>;<br><br>	<span class="hljs-comment">// 解析相关的函数</span><br>	<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">parse_file</span><span class="hljs-params">()</span></span>;<br>	<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">parse_dos_header</span><span class="hljs-params">()</span></span>;<br>	<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">parse_dos_stub</span><span class="hljs-params">()</span></span>;<br>	<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">parse_nt_headers</span><span class="hljs-params">()</span></span>;<br>	<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">parse_section_headers</span><span class="hljs-params">()</span></span>;<br>	<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">parse_import_directory</span><span class="hljs-params">()</span></span>;<br>	<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">parse_export_directory</span><span class="hljs-params">()</span></span>;<br>	<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">parse_basereloc_table</span><span class="hljs-params">()</span></span>;<br>	<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">parse_resources_table</span><span class="hljs-params">()</span></span>;<br><br>	<span class="hljs-comment">// 打印相关的函数</span><br>	<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">print_file_info</span><span class="hljs-params">()</span></span>;<br>	<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">print_dos_header_info</span><span class="hljs-params">()</span></span>;<br>	<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">print_dos_stub_info</span><span class="hljs-params">()</span></span>;<br>	<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">print_nt_headers_info</span><span class="hljs-params">()</span></span>;<br>	<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">print_section_headers_info</span><span class="hljs-params">()</span></span>;<br>	<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">print_import_table_info</span><span class="hljs-params">()</span></span>;<br>	<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">print_export_table_info</span><span class="hljs-params">()</span></span>;<br>	<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">print_basereloc_table_info</span><span class="hljs-params">()</span></span>;<br>	<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">print_resources_table_info</span><span class="hljs-params">()</span></span>;<br><br>};<br></code></pre></td></tr></tbody></table></figure>
+
+<h3 id="Step-2-1-解析DOS-Header"><a href="#Step-2-1-解析DOS-Header" class="headerlink" title="Step 2.1: 解析DOS Header"></a>Step 2.1: 解析DOS Header</h3><ul>
+<li>在类中维护一个<code>IMAGE_DOS_HEADER</code>的变量<code>pe_dos_header</code>，然后从文件中将相应数据读入到该成员变量即可。同时我们这里在类中维护了一个<code>nt_headers_offset</code>的成员变量，用于记录<code>NT Headers</code>的偏移值。</li>
+<li>代码：</li>
+</ul>
+<figure class="highlight c"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> <span class="hljs-title function_">PE32::parse_dos_header</span><span class="hljs-params">()</span><br>{<br>	<br>	fseek(pe_fp, <span class="hljs-number">0</span>, SEEK_SET);<br>	fread(&amp;pe_dos_header, <span class="hljs-keyword">sizeof</span>(___IMAGE_DOS_HEADER), <span class="hljs-number">1</span>, pe_fp);<br>	<span class="hljs-comment">// 这里不需要检查读入字节数，因为之前已经调用过 `pe_validate()` 了，</span><br>	<span class="hljs-comment">// 因此这里一定能够读入 `sizeof(___IMAGE_DOS_HEADER)` 个字节</span><br><br>}<br><br><span class="hljs-type">void</span> <span class="hljs-title function_">PE32::print_dos_header_info</span><span class="hljs-params">()</span><br>{<br>	nt_headers_offset = pe_dos_header.e_lfanew;<br><br>	<span class="hljs-comment">// 为了简化，我们这里只打印一些主要信息</span><br>	<span class="hljs-built_in">fprintf</span>(<span class="hljs-built_in">stdout</span>, <span class="hljs-string">"======DOS Header======\n\n"</span>);<br>	<span class="hljs-built_in">fprintf</span>(<span class="hljs-built_in">stdout</span>, <span class="hljs-string">"Magic number: %04X\n"</span>, pe_dos_header.e_magic);<br>	<span class="hljs-built_in">fprintf</span>(<span class="hljs-built_in">stdout</span>, <span class="hljs-string">"File address of new exe header: %X\n"</span>, pe_dos_header.e_lfanew);<br>	<span class="hljs-built_in">fprintf</span>(<span class="hljs-built_in">stdout</span>, <span class="hljs-string">"\n==========END==========\n"</span>);<br><br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>运行结果：</li>
+</ul>
+<p><img src="/2023/08/03/%E4%B8%80%E6%AD%A5%E4%B8%80%E6%AD%A5%E6%89%8B%E6%90%93%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84PE%E8%A7%A3%E6%9E%90%E5%99%A8/5.png" srcset="/img/loading.gif" lazyload></p>
+<hr>
+<h3 id="Step-2-2-解析DOS-Stub（Rich-headers）"><a href="#Step-2-2-解析DOS-Stub（Rich-headers）" class="headerlink" title="Step 2.2: 解析DOS Stub（Rich headers）"></a>Step 2.2: 解析DOS Stub（Rich headers）</h3><ul>
+<li><p>这一部分主要解析<code>DOS Stub</code>中的<code>Rich headers</code>。请注意，暂无文档说明过<code>Rich headers</code>是包含在<code>DOS Stub</code>内的，但<code>Rich headers</code>所处的位置确实介于<code>PE</code>头和<code>DOS</code>头之间的，因此本文不严谨的将<code>Rich headers</code>包含在<code>DOS Stub</code>内部</p>
+</li>
+<li><p>什么是<code>Rich headers</code>？</p>
+<ul>
+<li><code>Rich headers</code>可以理解为存储着开发环境信息的一段指纹[10]，或用于帮助诊断和调试</li>
+<li><code>Rich headers</code>使用<code>XOR Key</code>对<code>Rich headers</code>中的每4个字节进行了异或加密</li>
+<li><code>Rich headers</code>的结构如下图所示：</li>
+</ul>
+<p><img src="/2023/08/03/%E4%B8%80%E6%AD%A5%E4%B8%80%E6%AD%A5%E6%89%8B%E6%90%93%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84PE%E8%A7%A3%E6%9E%90%E5%99%A8/6.png" srcset="/img/loading.gif" lazyload></p>
+</li>
+<li><p>如何定位<code>Rich headers</code>？</p>
+<ul>
+<li>首先，<code>Rich headers</code>肯定是以四个字节的<code>Rich</code>（<code>0x68636952</code>），并且后面还跟着四个字节的<code>XOR key</code>；</li>
+<li>然后，为了确定<code>Rich headers</code>的长度，我们向前搜索，并根据<code>XOR</code>密钥异或恢复原数据，并找到<code>DanS ID</code>（<code>0x536e6144</code>），这样一来我们就找到了<code>Rich headers</code>的起始位置；</li>
+<li>最后，我们使用<code>XOR</code>密钥解密<code>Rich headers</code>的内容并恢复原数据。</li>
+</ul>
+</li>
+<li><p>设计结构体用来存储<code>Rich headers</code>数据：</p>
+</li>
+</ul>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">struct</span> <span class="hljs-title class_">__RICH_HEADER_DATA</span> {<br>	<span class="hljs-type">int</span>   data_size;<br>	<span class="hljs-type">char</span>* data_ptr;<br>}RICH_HEADER_DATA;<br><br><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">struct</span> <span class="hljs-title class_">__RICH_HEADER_ENTRY</span> {<br>	<span class="hljs-comment">// Build ID</span><br>	<span class="hljs-comment">// Product ID</span><br>	<span class="hljs-comment">// Count</span><br>	WORD  r_build_id;<br>	WORD  r_prod_id;<br>	DWORD r_count;<br><br>}RICH_HEADER_ENTRY, *PRICH_HEADER_ENTRY;<br><br><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">struct</span> <span class="hljs-title class_">__RICH_HEADER</span> {<br>	RICH_HEADER_DATA   raw_data;<br>	PRICH_HEADER_ENTRY entries;  <span class="hljs-comment">// pointer</span><br>	<span class="hljs-type">int</span>                entries_num;<br>	<span class="hljs-type">bool</span>			   exits;	 <span class="hljs-comment">// 这里我们使用了一个bool型变量表示是否存在该Header</span><br>}RICH_HEADER, * PRICH_HEADER;<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>处理逻辑代码：</li>
+</ul>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">PE32::parse_dos_stub</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>{<br>	<span class="hljs-type">size_t</span> alloc_size;<br>	<span class="hljs-type">char</span>* dos_stub_buffer, * buf_ptr;<br>	<span class="hljs-type">int</span> i, start, end;<br>	DWORD xor_key = <span class="hljs-number">0</span>;<br><br>	<span class="hljs-built_in">memset</span>(&amp;rich_headers, <span class="hljs-number">0</span>, <span class="hljs-built_in">sizeof</span>(RICH_HEADER));<br><br>	<span class="hljs-comment">// 防止malloc_size_too_big问题</span><br>	alloc_size = nt_headers_offset - <span class="hljs-built_in">sizeof</span>(__IMAGE_DOS_HEADER);<br>	<span class="hljs-keyword">if</span> (alloc_size + <span class="hljs-number">1</span> &gt; <span class="hljs-number">0xffffff</span>) {<br>		<span class="hljs-comment">// Really too big! Reject this allocation!</span><br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br><br>	<span class="hljs-comment">// 解析Rich headers</span><br>	dos_stub_buffer = (<span class="hljs-type">char</span>*)<span class="hljs-built_in">malloc</span>(alloc_size + <span class="hljs-number">1</span>);<br>	<span class="hljs-keyword">if</span> (!dos_stub_buffer) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Dos_stub_buffer malloc failed\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br>	<span class="hljs-built_in">fseek</span>(pe_fp, <span class="hljs-built_in">sizeof</span>(__IMAGE_DOS_HEADER) - <span class="hljs-number">1</span>, SEEK_SET);<br>	<span class="hljs-built_in">fread</span>(dos_stub_buffer, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">char</span>), alloc_size, pe_fp);<br>	dos_stub_buffer[alloc_size] = <span class="hljs-number">0</span>;<br><br>	<span class="hljs-comment">// 从后往前寻找 `Rich` 标志</span><br>	<span class="hljs-comment">// 理论上这里的Rich headers是对齐到4字节的</span><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	for (i = alloc_size - 4; i &gt;= 0; i -= 4) {</span><br><span class="hljs-comment">		if (*(DWORD*)(dos_stub_buffer + i) == ___IMAGE_RICH_ID) {</span><br><span class="hljs-comment">			// 找到 `Rich`</span><br><span class="hljs-comment">			xor_key = *(DWORD*)(dos_stub_buffer + i + 4);</span><br><span class="hljs-comment">			fprintf(stdout, "%x\n", xor_key);</span><br><span class="hljs-comment">		}</span><br><span class="hljs-comment">	}</span><br><span class="hljs-comment">	*/</span><br><br>	<span class="hljs-keyword">for</span> (i = alloc_size - <span class="hljs-number">4</span>; i &gt;= <span class="hljs-number">0</span>; i--) {<br>		<span class="hljs-keyword">if</span> (dos_stub_buffer[i] == <span class="hljs-string">'R'</span> &amp;&amp;<br>			dos_stub_buffer[i + <span class="hljs-number">1</span>] == <span class="hljs-string">'i'</span> &amp;&amp;<br>			dos_stub_buffer[i + <span class="hljs-number">2</span>] == <span class="hljs-string">'c'</span> &amp;&amp;<br>			dos_stub_buffer[i + <span class="hljs-number">3</span>] == <span class="hljs-string">'h'</span>) {<br>			<span class="hljs-comment">// 找到 `Rich`</span><br>			<span class="hljs-keyword">if</span> (i + <span class="hljs-number">8</span> &gt;= (<span class="hljs-type">int</span>)alloc_size) {<br>				<span class="hljs-comment">// 处理潜在的越界读问题</span><br>				<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Detect out bound read. Bad PE file!\n"</span>);<br>				<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>			}<br>			xor_key = *(DWORD*)(dos_stub_buffer + i + <span class="hljs-number">4</span>);<br>			<span class="hljs-keyword">break</span>;<br>		}<br>	}<br>	<span class="hljs-keyword">if</span> (i &lt; <span class="hljs-number">0</span>) {<br>		<span class="hljs-comment">// 该PE文件可能经过修改调整，Rich headers可能被删除了</span><br>		<span class="hljs-comment">// 也有可能该PE文件格式有误</span><br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"Warning: Cannot find Rich headers. (Ignore)\n"</span>);<br>		rich_headers.exits = <span class="hljs-literal">false</span>;<br>		<span class="hljs-keyword">return</span>;<br>	}<br><br>	end = i + <span class="hljs-number">8</span>;<br><br>	<span class="hljs-comment">// 寻找起始点</span><br>	<span class="hljs-keyword">for</span> (i = end - <span class="hljs-number">8</span>; i &gt;= <span class="hljs-number">0</span>; i -= <span class="hljs-number">4</span>) {<br>		DWORD* temp = (DWORD*)&amp;dos_stub_buffer[i];<br>		<span class="hljs-keyword">if</span> ((*temp ^ xor_key) == ___IMAGE_RICH_DANS_ID)<br>			<span class="hljs-keyword">break</span>;<br>	}<br>	<span class="hljs-keyword">if</span> (i &lt; <span class="hljs-number">0</span>) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Bad PE file!\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br><br>	start = i;<br><br>	alloc_size = end - start;<br>	rich_headers.raw_data.data_ptr = (<span class="hljs-type">char</span>*)<span class="hljs-built_in">malloc</span>(alloc_size);<br>	<span class="hljs-keyword">if</span> (!rich_headers.raw_data.data_ptr) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Data_ptr malloc failed!\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br>	rich_headers.raw_data.data_size = alloc_size;<br>	<span class="hljs-built_in">memcpy</span>(rich_headers.raw_data.data_ptr, dos_stub_buffer + start, alloc_size);<br>	<span class="hljs-built_in">free</span>(dos_stub_buffer);<br><br>	<span class="hljs-comment">// 删除首部"DanS + 3padding"和尾部"Rich + XOR key"</span><br>	<span class="hljs-keyword">if</span>((alloc_size - <span class="hljs-number">24</span>) % <span class="hljs-number">8</span> == <span class="hljs-number">0</span> &amp;&amp; (alloc_size - <span class="hljs-number">24</span>) / <span class="hljs-number">8</span> &lt;= <span class="hljs-number">0xffff</span>)  <span class="hljs-comment">// 限制一下最大rich header数</span><br>		rich_headers.entries_num = (alloc_size - <span class="hljs-number">24</span>) / <span class="hljs-number">8</span>;<br>	<span class="hljs-keyword">else</span> {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Bad PE file!\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br><br>	<span class="hljs-comment">// 解析头部实体</span><br>	rich_headers.entries = (PRICH_HEADER_ENTRY)<span class="hljs-built_in">malloc</span>(<span class="hljs-built_in">sizeof</span>(RICH_HEADER_ENTRY) * rich_headers.entries_num);<br>	<span class="hljs-keyword">if</span> (!rich_headers.entries) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Rich_headers.entries malloc failed!\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br><br>	buf_ptr = rich_headers.raw_data.data_ptr + <span class="hljs-number">16</span>;<br>	<span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i &lt; rich_headers.entries_num; i++) {<br><br>		DWORD* temp = (DWORD*)buf_ptr;<br>		rich_headers.entries[i].r_prod_id = (*temp &gt;&gt; <span class="hljs-number">16</span>) ^ (xor_key &gt;&gt; <span class="hljs-number">16</span>);<br>		rich_headers.entries[i].r_build_id = (*temp &amp; <span class="hljs-number">0x0000ffff</span>) ^ (xor_key &amp; <span class="hljs-number">0x0000ffff</span>);<br>		temp++;<br>		rich_headers.entries[i].r_count = *temp ^ xor_key;<br>		buf_ptr += <span class="hljs-number">8</span>;<br><br>	}<br>	<br>    rich_headers.exits = <span class="hljs-literal">true</span>;<br>    <br>	<span class="hljs-comment">// 酌情删除raw_data缓存的rich_headers原始数据</span><br>	<span class="hljs-built_in">free</span>(rich_headers.raw_data.data_ptr);<br><br>}<br><br><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">PE32::print_dos_stub_info</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>{	<br>	<span class="hljs-comment">// 打印Rich headers的信息</span><br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"=====Rich Headers=====\n\n"</span>);<br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"%-25s\tBuildID\t\tCount\t\tMeaning\n"</span>, <span class="hljs-string">"ProductName"</span>);<br>	<span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> i = <span class="hljs-number">0</span>; i &lt; rich_headers.entries_num; i++) {<br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"%-25s\t%d\t\t%d\t\t%d.%d.%d\n"</span>,<br>			prod_ids_to_names[rich_headers.entries[i].r_prod_id],<br>			rich_headers.entries[i].r_prod_id,<br>			rich_headers.entries[i].r_count,<br>			rich_headers.entries[i].r_build_id,<br>			rich_headers.entries[i].r_prod_id,<br>			rich_headers.entries[i].r_count<br>		);<br>	}<br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"\n==========END==========\n\n"</span>);<br><br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>运行结果：</li>
+</ul>
+<p><img src="/2023/08/03/%E4%B8%80%E6%AD%A5%E4%B8%80%E6%AD%A5%E6%89%8B%E6%90%93%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84PE%E8%A7%A3%E6%9E%90%E5%99%A8/7.png" srcset="/img/loading.gif" lazyload></p>
+<hr>
+<h3 id="Step-2-3-解析NT-Headers"><a href="#Step-2-3-解析NT-Headers" class="headerlink" title="Step 2.3: 解析NT Headers"></a>Step 2.3: 解析NT Headers</h3><ul>
+<li><p><code>NT Headers</code>包含三个部分，分别是 <code>PE Signature</code> 、<code>File Header</code> 和 <code>Optional Header</code></p>
+<ul>
+<li><code>PE Signature</code>：没有啥玩意，就是四个字节0x4550（PE..），用来表示PE头</li>
+<li><code>File Header</code>：记录文件的一些信息，如计算机体系结构类型、节区数量、时间戳、<code>Optional Header</code>大小、PE文件属性等等</li>
+<li><code>Optional Header</code>：可选头，包含一些程序执行的重要信息，如程序执行入口地址、程序首选装载地址、内存中节区对齐大小、文件中节区对齐大小、镜像大小、PE头大小等等</li>
+</ul>
+</li>
+<li><p>解析流程：</p>
+<ul>
+<li>按照相关结构体的信息依次解析即可</li>
+</ul>
+</li>
+<li><p>处理逻辑代码：</p>
+</li>
+</ul>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">PE32::parse_nt_headers</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>{<br>	<span class="hljs-type">size_t</span> read_size;<br><br>	<span class="hljs-built_in">fseek</span>(pe_fp, nt_headers_offset, SEEK_SET);<br>	read_size = <span class="hljs-built_in">fread</span>(&amp;pe_nt_headers_32, <span class="hljs-built_in">sizeof</span>(___IMAGE_NT_HEADERS32), <span class="hljs-number">1</span>, pe_fp);<br><br>	<span class="hljs-keyword">if</span> (read_size != <span class="hljs-number">1</span>) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Bad PE file!\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br><br>	nt_sections_cnt = pe_nt_headers_32.FileHeader.NumberOfSections;<br>	nt_optional_header_size = pe_nt_headers_32.FileHeader.SizeOfOptionalHeader;<br>	nt_characteristics = pe_nt_headers_32.FileHeader.Characteristics;<br>	nt_optional_headers = &amp;pe_nt_headers_32.OptionalHeader;<br>	pe_header_size = nt_optional_headers-&gt;SizeOfHeaders;<br>	import_dir_table_rva = nt_optional_headers-&gt;DataDirectory[___IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;<br>	import_dir_table_size = nt_optional_headers-&gt;DataDirectory[___IMAGE_DIRECTORY_ENTRY_IMPORT].Size;<br>	export_dir_table_rva = nt_optional_headers-&gt;DataDirectory[___IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;<br>	export_dir_table_size = nt_optional_headers-&gt;DataDirectory[___IMAGE_DIRECTORY_ENTRY_EXPORT].Size;<br>	basereloc_dir_table_rva = nt_optional_headers-&gt;DataDirectory[___IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress;<br>	basereloc_dir_table_size = nt_optional_headers-&gt;DataDirectory[___IMAGE_DIRECTORY_ENTRY_BASERELOC].Size;<br>	resource_dir_table_rva = nt_optional_headers-&gt;DataDirectory[___IMAGE_DIRECTORY_ENTRY_RESOURCE].VirtualAddress;<br>	resource_dir_table_size = nt_optional_headers-&gt;DataDirectory[___IMAGE_DIRECTORY_ENTRY_RESOURCE].Size;<br><br>}<br><br><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">PE32::print_nt_headers_info</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>{<br>	WORD temp_c, n, i;<br><br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"======NT Headers======\n\n"</span>);<br><br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"PE Signature: 0x%X\n\n"</span>, pe_nt_headers_32.Signature);<br><br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"File Header:\n"</span>);<br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">" - Machine: %s (0x%04X)\n"</span>, <br>		<span class="hljs-built_in">translate_machine</span>(pe_nt_headers_32.FileHeader.Machine),<br>		pe_nt_headers_32.FileHeader.Machine);<br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">" - Sections Count: %d\n"</span>, nt_sections_cnt);<br>	<span class="hljs-comment">// fprintf(stdout, " - Time Date Stamp: %d\n", pe_nt_headers_32.FileHeader.TimeDateStamp);</span><br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">" - Size of Optional Header: %d\n"</span>, nt_optional_header_size);<br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">" - Characteristics: 0x%X\n"</span>, nt_characteristics);<br>	<span class="hljs-comment">// 进一步解析Characteritics</span><br>	temp_c = nt_characteristics;<br>	n = <span class="hljs-number">0</span>;<br>	<span class="hljs-keyword">while</span> (temp_c) {<br>		<span class="hljs-keyword">if</span> (temp_c &amp; <span class="hljs-number">1</span>) {<br>			<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"    - 0x%X:\t %s\n"</span>, (<span class="hljs-number">1</span> &lt;&lt; n), characteristics_names[n]);<br>		}<br>		temp_c = temp_c &gt;&gt; <span class="hljs-number">1</span>;<br>		n++;<br>	}<br><br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"\nOptional Header:\n"</span>);<br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">" - Magic: %s (0x%X)\n"</span>, <span class="hljs-built_in">translate_nt_optional_header_magic</span>(nt_optional_headers-&gt;Magic), nt_optional_headers-&gt;Magic);<br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">" - Size of Code: 0x%X (%d)\n"</span>, nt_optional_headers-&gt;SizeOfCode, nt_optional_headers-&gt;SizeOfCode);<br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">" - Size of Initialized Data: 0x%X (%d)\n"</span>, nt_optional_headers-&gt;SizeOfInitializedData, nt_optional_headers-&gt;SizeOfInitializedData);<br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">" - Size of Uninitialized Data: 0x%X (%d)\n"</span>, nt_optional_headers-&gt;SizeOfUninitializedData, nt_optional_headers-&gt;SizeOfUninitializedData);<br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">" - Entry Point: 0x%X (%d)\n"</span>, nt_optional_headers-&gt;AddressOfEntryPoint, nt_optional_headers-&gt;AddressOfEntryPoint);<br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">" - Base of Code: 0x%X\n"</span>, nt_optional_headers-&gt;BaseOfCode);<br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">" - Desired Image Base: 0x%X\n"</span>, nt_optional_headers-&gt;ImageBase);<br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">" - Section Alignment: 0x%X\n"</span>, nt_optional_headers-&gt;SectionAlignment);<br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">" - File Alignment: 0x%X\n"</span>, nt_optional_headers-&gt;FileAlignment);<br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">" - Size of Image: 0x%X (%d)\n"</span>, nt_optional_headers-&gt;SizeOfImage, nt_optional_headers-&gt;SizeOfImage);<br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">" - Size of Headers: 0x%X (%d)\n"</span>, nt_optional_headers-&gt;SizeOfHeaders, nt_optional_headers-&gt;SizeOfHeaders);<br><br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">" - Data Directory:\n"</span>);<br>	<span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i &lt; ___IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR; i++) {<br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"    - %s ==&gt; Address: 0x%X, Size: 0x%X\n"</span>, <span class="hljs-built_in">translate_data_directory</span>(i), nt_optional_headers-&gt;DataDirectory[i].VirtualAddress, nt_optional_headers-&gt;DataDirectory[i].Size);<br>	}<br><br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"\n==========END=========\n\n"</span>);<br><br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>运行结果：</li>
+</ul>
+<p><img src="/2023/08/03/%E4%B8%80%E6%AD%A5%E4%B8%80%E6%AD%A5%E6%89%8B%E6%90%93%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84PE%E8%A7%A3%E6%9E%90%E5%99%A8/8.png" srcset="/img/loading.gif" lazyload></p>
+<hr>
+<h3 id="Step-2-4-解析Section-Headers"><a href="#Step-2-4-解析Section-Headers" class="headerlink" title="Step 2.4: 解析Section Headers"></a>Step 2.4: 解析Section Headers</h3><ul>
+<li><p><code>Section Headers</code>：存储着与节区相关的信息，包括节区名、<code>VirtualAddress</code>、<code>VirtualSize</code>、<code>PointerToRawData</code>、<code>SizeOfRawData</code>、<code>Characteristics</code>等</p>
+<ul>
+<li><code>VirtualAddress</code>：该节区载入内存中的偏移地址[11]；</li>
+<li><code>VirtualSize</code>：该节区在内存中的大小（内存对齐之前的长度：真实长度）[11]；</li>
+<li><code>PointerToRawData</code>：该节区在文件中的偏移地址[11]；</li>
+<li><code>SizeOfRawData</code>：该节区在文件中的大小（文件对齐之前的长度：真实长度）[11]；</li>
+<li><code>Characteristics</code>：用来表征该节区的一些属性，具体值详见<a target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#section-flags">PE Format - Win32 apps | Microsoft Learn</a></li>
+</ul>
+</li>
+<li><p>解析流程：</p>
+<ul>
+<li><code>Section Headers</code>在<code>NT Headers</code>之后，而<code>NT Headers</code>的值是固定的，可以通过<code>nt_headers_offset</code>偏移地址加上<code>NT Headers</code>的长度找到<code>Section Headers</code>在文件中的偏移地址；</li>
+<li><code>Section Headers</code>中section数量由<code>NT Headers - FileHeader</code>中的<code>NumberOfSections</code>字段决定，因此可以通过该字段确定Section的数量；</li>
+<li>按照<code>___IMAGE_SECTION_HEADER</code>结构体依次解析<code>NumberOfSections</code>个Section即可</li>
+</ul>
+</li>
+<li><p>处理逻辑代码：</p>
+</li>
+</ul>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">PE32::parse_section_headers</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>{<br>	<span class="hljs-type">size_t</span> read_size;<br><br>	<span class="hljs-comment">// 检查一下边界</span><br>	<span class="hljs-type">int</span> start_pos = nt_headers_offset + <span class="hljs-built_in">sizeof</span>(___IMAGE_NT_HEADERS32);<br>	<span class="hljs-keyword">if</span> (start_pos + nt_sections_cnt * <span class="hljs-built_in">sizeof</span>(___IMAGE_SECTION_HEADER) &gt; pe_header_size) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Out of PE header's size. Bad PE file!\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br><br>	<span class="hljs-comment">// section_headers为指针变量，需要动态分配空间</span><br>	section_headers = (___PIMAGE_SECTION_HEADER)<span class="hljs-built_in">malloc</span>(<span class="hljs-built_in">sizeof</span>(___IMAGE_SECTION_HEADER) * nt_sections_cnt);<br>	<span class="hljs-keyword">if</span> (!section_headers) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Section_headers malloc failed!\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br><br>	<span class="hljs-built_in">fseek</span>(pe_fp, start_pos, SEEK_SET);<br>	read_size = <span class="hljs-built_in">fread</span>(section_headers, <span class="hljs-built_in">sizeof</span>(___IMAGE_SECTION_HEADER), nt_sections_cnt, pe_fp);<br>	<br>	<span class="hljs-keyword">if</span> (read_size != nt_sections_cnt) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Bad PE file!\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br><br>}<br><br><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">PE32::print_section_headers_info</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>{<br><br>	<span class="hljs-type">int</span> i;<br><br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"====Section Headers===\n"</span>);<br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"Number of Sections: %d\n\n"</span>, nt_sections_cnt);<br><br>	<span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i &lt; nt_sections_cnt; i++) {<br><br>		BYTE* section_name = (BYTE*)<span class="hljs-built_in">malloc</span>(___IMAGE_SIZEOF_SHORT_NAME + <span class="hljs-number">1</span>);<br>		<span class="hljs-keyword">if</span> (!section_name) {<br>			<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Section_name malloc failed!\n"</span>);<br>			<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>		}<br>		section_name[___IMAGE_SIZEOF_SHORT_NAME] = <span class="hljs-number">0</span>;<br>		<span class="hljs-built_in">memcpy</span>(section_name, section_headers[i].Name, ___IMAGE_SIZEOF_SHORT_NAME);<br><br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"  * %s:\n"</span>, section_name);<br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"    - Virtual Address: 0x%X\n"</span>, section_headers[i].VirtualAddress);<br>		<span class="hljs-comment">// virtual size 是该节区装在到内存的总大小，如果值大于SizeOfRawData则多出的部分用0x00填充</span><br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"    - Virtual Size: 0x%X\n"</span>, section_headers[i].Misc.VirtualSize);<br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"    - Pointer to Raw Data: 0x%X\n"</span>, section_headers[i].PointerToRawData);<br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"    - Raw Data's Size: 0x%X\n"</span>, section_headers[i].SizeOfRawData);<br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"    - Characteristics: 0x%X\n\n"</span>, section_headers[i].Characteristics);<br><br>	}<br><br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"\n==========END=========\n\n"</span>);<br><br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>运行结果：</li>
+</ul>
+<p><img src="/2023/08/03/%E4%B8%80%E6%AD%A5%E4%B8%80%E6%AD%A5%E6%89%8B%E6%90%93%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84PE%E8%A7%A3%E6%9E%90%E5%99%A8/9.png" srcset="/img/loading.gif" lazyload></p>
+<hr>
+<h3 id="本节小结"><a href="#本节小结" class="headerlink" title="本节小结"></a>本节小结</h3><ul>
+<li>本节主要解析了PE32文件的头部信息，包括<code>DOS Header</code>、<code>Rish Headers</code>、<code>NT Headers</code>和<code>Section Headers</code>，并通过这种解析的过程了解了PE文件的结构，如下图所示：</li>
+</ul>
+<p><img src="/2023/08/03/%E4%B8%80%E6%AD%A5%E4%B8%80%E6%AD%A5%E6%89%8B%E6%90%93%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84PE%E8%A7%A3%E6%9E%90%E5%99%A8/10.png" srcset="/img/loading.gif" lazyload></p>
+<ul>
+<li>此外还剩下需要具体分析的是Section信息，我们将在下一节中详细介绍</li>
+</ul>
+<h2 id="Step-3-解析Sections"><a href="#Step-3-解析Sections" class="headerlink" title="Step 3: 解析Sections"></a>Step 3: 解析Sections</h2><ul>
+<li>PE文件的Sections包括[12]：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th align="left">Section Name</th>
+<th align="left">Content</th>
+<th align="left">Characteristics</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">.bss</td>
+<td align="left">未初始化数据(free format)</td>
+<td align="left">IMAGE_SCN_CNT_UNINITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE</td>
+</tr>
+<tr>
+<td align="left">.cormeta</td>
+<td align="left">CLR metadata that indicates that the object file contains managed code</td>
+<td align="left">IMAGE_SCN_LNK_INFO</td>
+</tr>
+<tr>
+<td align="left">.data</td>
+<td align="left">已初始化数据(free format)</td>
+<td align="left">IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE</td>
+</tr>
+<tr>
+<td align="left">.debug$F</td>
+<td align="left">Generated FPO debug information (object only, x86 architecture only, and now obsolete)</td>
+<td align="left">IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_DISCARDABLE</td>
+</tr>
+<tr>
+<td align="left">.debug$P</td>
+<td align="left">Precompiled debug types (object only)</td>
+<td align="left">IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_DISCARDABLE</td>
+</tr>
+<tr>
+<td align="left">.debug$S</td>
+<td align="left">Debug symbols (object only)</td>
+<td align="left">IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_DISCARDABLE</td>
+</tr>
+<tr>
+<td align="left">.debug$T</td>
+<td align="left">Debug types (object only)</td>
+<td align="left">IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_DISCARDABLE</td>
+</tr>
+<tr>
+<td align="left">.drective</td>
+<td align="left">Linker options</td>
+<td align="left">IMAGE_SCN_LNK_INFO</td>
+</tr>
+<tr>
+<td align="left">.edata</td>
+<td align="left">导出表</td>
+<td align="left">IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ</td>
+</tr>
+<tr>
+<td align="left">.idata</td>
+<td align="left">导入表</td>
+<td align="left">IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE</td>
+</tr>
+<tr>
+<td align="left">.idlsym</td>
+<td align="left">Includes registered SEH (image only) to support IDL attributes. For information, see “IDL Attributes” in <a target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#references">References</a> at the end of this topic.</td>
+<td align="left">IMAGE_SCN_LNK_INFO</td>
+</tr>
+<tr>
+<td align="left">.pdata</td>
+<td align="left">异常信息</td>
+<td align="left">IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ</td>
+</tr>
+<tr>
+<td align="left">.rdata</td>
+<td align="left">只读的已初始化数据</td>
+<td align="left">IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ</td>
+</tr>
+<tr>
+<td align="left">.reloc</td>
+<td align="left">镜像重定向</td>
+<td align="left">IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_DISCARDABLE</td>
+</tr>
+<tr>
+<td align="left">.rsrc</td>
+<td align="left">资源目录</td>
+<td align="left">IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ</td>
+</tr>
+<tr>
+<td align="left">.sbss</td>
+<td align="left">GP-relative uninitialized data (free format)</td>
+<td align="left">IMAGE_SCN_CNT_UNINITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE | IMAGE _SCN_GPREL The IMAGE_SCN_GPREL flag should be set for IA64 architectures only; this flag is not valid for other architectures. The IMAGE_SCN_GPREL flag is for object files only; when this section type appears in an image file, the IMAGE_SCN_GPREL flag must not be set.</td>
+</tr>
+<tr>
+<td align="left">.sdata</td>
+<td align="left">GP-relative initialized data (free format)</td>
+<td align="left">IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE | IMAGE _SCN_GPREL The IMAGE_SCN_GPREL flag should be set for IA64 architectures only; this flag is not valid for other architectures. The IMAGE_SCN_GPREL flag is for object files only; when this section type appears in an image file, the IMAGE_SCN_GPREL flag must not be set.</td>
+</tr>
+<tr>
+<td align="left">.srdata</td>
+<td align="left">GP-relative read-only data (free format)</td>
+<td align="left">IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE _SCN_GPREL The IMAGE_SCN_GPREL flag should be set for IA64 architectures only; this flag is not valid for other architectures. The IMAGE_SCN_GPREL flag is for object files only; when this section type appears in an image file, the IMAGE_SCN_GPREL flag must not be set.</td>
+</tr>
+<tr>
+<td align="left">.sxdata</td>
+<td align="left">Registered exception handler data (free format and x86/object only)</td>
+<td align="left">IMAGE_SCN_LNK_INFO Contains the symbol index of each of the exception handlers being referred to by the code in that object file. The symbol can be for an UNDEF symbol or one that is defined in that module.</td>
+</tr>
+<tr>
+<td align="left">.text</td>
+<td align="left">可执行汇编码 (free format)</td>
+<td align="left">IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IIMAGE_SCN_MEM_READ</td>
+</tr>
+<tr>
+<td align="left">.tls</td>
+<td align="left">线程局部存储(object only)</td>
+<td align="left">IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE</td>
+</tr>
+<tr>
+<td align="left">.tls$</td>
+<td align="left">Thread-local storage (object only)</td>
+<td align="left">IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE</td>
+</tr>
+<tr>
+<td align="left">.vsdata</td>
+<td align="left">GP-relative initialized data (free format and for ARM, SH4, and Thumb architectures only)</td>
+<td align="left">IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE</td>
+</tr>
+<tr>
+<td align="left">.xdata</td>
+<td align="left">Exception information (free format)</td>
+<td align="left">IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ</td>
+</tr>
+</tbody></table>
+<ul>
+<li>接下来我们将解析Sections中比较重要的几个Section的数据</li>
+</ul>
+<h3 id="Step-3-1-解析PE导入表（-idata）"><a href="#Step-3-1-解析PE导入表（-idata）" class="headerlink" title="Step 3.1: 解析PE导入表（.idata）"></a>Step 3.1: 解析PE导入表（.idata）</h3><ul>
+<li><p><code>.idata</code>节存储着所有的导入符号，其包含下面几个内容[13]：</p>
+<ul>
+<li><p><strong>导入目录表</strong></p>
+<p>Null 目录条目</p>
+</li>
+<li><p>DLL1 导入查找表</p>
+<p>Null</p>
+</li>
+<li><p>DLL2 导入查找表</p>
+<p>Null</p>
+</li>
+<li><p>DLL3 导入查找表</p>
+<p>Null</p>
+</li>
+<li><p>提示/名称表</p>
+</li>
+</ul>
+</li>
+</ul>
+<hr>
+<p><strong>1. 导入目录表</strong></p>
+<ul>
+<li>导入目录表的每一个字段的含义：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>偏移</th>
+<th>大小</th>
+<th>字段名</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0</td>
+<td>4</td>
+<td>导入查找表的RVA<br><strong>Import Lookup Table RVA<br>（Characteristics）</strong></td>
+<td>导入查找表ILT的RVA，该表包含每一个导入的名字或序号</td>
+</tr>
+<tr>
+<td>4</td>
+<td>4</td>
+<td>时间/日期戳<br><strong>Time/Date Stamp</strong></td>
+<td>在镜像被绑定前该字段设置为0，在绑定之后该字段设置为DLL的时间/日期戳</td>
+</tr>
+<tr>
+<td>8</td>
+<td>4</td>
+<td>转发链<br><strong>Forwarder Chain</strong></td>
+<td>第一个转发器引用的索引</td>
+</tr>
+<tr>
+<td>12</td>
+<td>4</td>
+<td>名字的RVA<br><strong>Name RVA</strong></td>
+<td>包含该DLL名字的ASCII字符串地址，该地址相对于镜像基址</td>
+</tr>
+<tr>
+<td>16</td>
+<td>4</td>
+<td>导入地址表RVA<br><strong>Import Address Table RVA (Thunk Table)</strong></td>
+<td>导入地址表IAT的RVA，在镜像被绑定之前，该表的内容与导入查找表ILT内容相同</td>
+</tr>
+</tbody></table>
+<p><strong>2. 导入查找表ILT</strong></p>
+<ul>
+<li>对于PE32来说，该表是一个32位数字的数组；对于PE32+来说，该表是64位数字的数组</li>
+<li>布局[13]：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th align="left">Bit(s)</th>
+<th align="left">Size</th>
+<th align="left">Bit field</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">31/63</td>
+<td align="left">1</td>
+<td align="left">Ordinal/Name Flag</td>
+<td align="left">If this bit is set, import by ordinal. Otherwise, import by name. Bit is masked as 0x80000000 for PE32, 0x8000000000000000 for PE32+.</td>
+</tr>
+<tr>
+<td align="left">15-0</td>
+<td align="left">16</td>
+<td align="left">Ordinal Number</td>
+<td align="left">A 16-bit ordinal number. This field is used only if the Ordinal/Name Flag bit field is 1 (import by ordinal). Bits 30-15 or 62-15 must be 0.</td>
+</tr>
+<tr>
+<td align="left">30-0</td>
+<td align="left">31</td>
+<td align="left">Hint/Name Table RVA</td>
+<td align="left">A 31-bit RVA of a hint/name table entry. This field is used only if the Ordinal/Name Flag bit field is 0 (import by name). For PE32+ bits 62-31 must be zero.</td>
+</tr>
+</tbody></table>
+<p><strong>3. 提示/名称表：Hint/Name Table</strong></p>
+<ul>
+<li>布局[13]：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>偏移</th>
+<th>大小</th>
+<th>字段名</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0</td>
+<td>2</td>
+<td>提示</td>
+<td>导出名称指针表的索引</td>
+</tr>
+<tr>
+<td>2</td>
+<td>-</td>
+<td>名称</td>
+<td>导入名称ASCII字符串</td>
+</tr>
+<tr>
+<td>*</td>
+<td>0 or 1</td>
+<td>填充</td>
+<td></td>
+</tr>
+</tbody></table>
+<p><strong>4. 导入地址表IAT</strong></p>
+<ul>
+<li>在镜像被绑定之前，IAT中的结构和内容与ILT相同</li>
+<li>在镜像被绑定之后，IAT中的实体被重写为需要导入的32位/64位的符号地址，i.e. <strong>该表在运行时会被PE加载器重写</strong></li>
+</ul>
+<hr>
+<ul>
+<li><p>解析流程：</p>
+<ul>
+<li>在Step 2.3节中，我们解析了<code>NT Headers</code>中的<code>Data Directory</code>字段，而该字段中就存储了<code>Import Directory</code>的相对虚拟地址RVA，我们需要将其转换为文件中的偏移地址</li>
+<li>RVA –&gt; RAW：<ol>
+<li>首先应该遍历所有节区，找到该RVA属于哪一个节区</li>
+<li><code>Section Headers</code>记录了各个Section的<code>Virtual Address</code>和<code>Pointer to Raw Data</code>，该地址<strong>在文件中的偏移RAW = RVA - Section’s Virtual Address + Pointer to Raw Data</strong>（我们将该功能封装到一个函数中）</li>
+<li>读取并解析RAW中的数据</li>
+</ol>
+</li>
+<li>举例：我们假设导入目录表的RVA为0x1D1F4，<code>.idata</code>的<code>Virtual Address</code>为 0x1D000且大小为0xBE7，因此该RVA在<code>.idata</code>段内；然后，我们根据<code>.idata</code>的<code>Pointer to Raw Data</code>值0xA800，找到该导入目录表在文件中的偏移值为0xA800+（0x1D1F4-0x1D000）= <strong>0xA9F4</strong></li>
+<li>导入目录表实体数可以由<code>Import Directory</code>的大小除以20字节得到，请注意最后一个实体为全0填充</li>
+</ul>
+</li>
+<li><p>处理代码：</p>
+</li>
+</ul>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">PE32::parse_import_directory</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>{<br><br>	DWORD raw_offset, entry_num, read_size;<br><br>	<span class="hljs-comment">// 先检查import_dir_table_size的合法性，拒绝非法PE文件</span><br>	<span class="hljs-keyword">if</span> (import_dir_table_size % <span class="hljs-built_in">sizeof</span>(___IMAGE_IMPORT_DESCRIPTOR) != <span class="hljs-number">0</span>) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Wrong Import Directory size. Bad PE file!\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br><br>	entry_num = import_dir_table_size / <span class="hljs-built_in">sizeof</span>(___IMAGE_IMPORT_DESCRIPTOR);<br>	<span class="hljs-comment">// 这里需要注意一下，导入目录表最后一个实体为全0填充</span><br>	<span class="hljs-comment">// 这里其实没必要读取最后一个实体的内容</span><br>	entry_num = entry_num - <span class="hljs-number">1</span>;<br><br>	<span class="hljs-keyword">if</span> (entry_num &gt; <span class="hljs-number">0xffff</span>) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Too many import entries!"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br><br>	raw_offset = <span class="hljs-built_in">va_to_raw</span>(import_dir_table_rva);<br>	<span class="hljs-built_in">fseek</span>(pe_fp, raw_offset, SEEK_SET);<br><br>	import_dir_table_entries = (___PIMAGE_IMPORT_DESCRIPTOR)<span class="hljs-built_in">malloc</span>(<span class="hljs-built_in">sizeof</span>(___IMAGE_IMPORT_DESCRIPTOR) * entry_num);<br>	<span class="hljs-keyword">if</span> (!import_dir_table_entries) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Import_dir_table malloc failed!\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br>	read_size = <span class="hljs-built_in">fread</span>(import_dir_table_entries, <span class="hljs-built_in">sizeof</span>(___IMAGE_IMPORT_DESCRIPTOR), entry_num, pe_fp);<br><br>	<span class="hljs-keyword">if</span> (read_size != entry_num) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Bad PE file!\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br><br>	import_dir_table_entries_num = entry_num;<br><br>}<br><br><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">PE32::print_import_table_info</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>{<br><br>	DWORD i, j, name_size, name_rva;<br>	<span class="hljs-type">char</span>* name_tmp, ch = <span class="hljs-number">1</span>;<br>	___IMAGE_IMPORT_BY_NAME hint;<br><br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"======Import table====\n\n"</span>);<br><br>	<span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i &lt; import_dir_table_entries_num; i++) {<br><br>		name_rva = import_dir_table_entries[i].Name;<br>		<span class="hljs-built_in">fseek</span>(pe_fp, <span class="hljs-built_in">va_to_raw</span>(name_rva), SEEK_SET);<br>		<br>		<span class="hljs-comment">// 确定名字的长度</span><br>		name_size = <span class="hljs-number">0</span>;<br>		ch = <span class="hljs-built_in">fgetc</span>(pe_fp);<br>		<span class="hljs-keyword">while</span> (ch != EOF &amp;&amp; ch != <span class="hljs-number">0</span>) {<br>			<span class="hljs-keyword">if</span> (++name_size &gt; <span class="hljs-number">256</span>) { <br>				<span class="hljs-comment">// 拒绝名称大于256的DLL名字（对非法PE的检查）</span><br>				<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: DLL's name too long?!\n"</span>);<br>				<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>			}<br>			ch = <span class="hljs-built_in">fgetc</span>(pe_fp);<br>		}<br>		<br>		name_tmp = (<span class="hljs-type">char</span>*)<span class="hljs-built_in">malloc</span>(name_size + <span class="hljs-number">1</span>);<br>		<span class="hljs-keyword">if</span> (!name_tmp) {<br>			<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Name_tmp malloc failed!\n"</span>);<br>			<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>		}<br>		name_tmp[name_size] = <span class="hljs-number">0</span>;<br>		<span class="hljs-built_in">fseek</span>(pe_fp, <span class="hljs-built_in">va_to_raw</span>(name_rva), SEEK_SET);<br>		<span class="hljs-built_in">fread</span>(name_tmp, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">char</span>), name_size, pe_fp);<br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"  * %s:\n\n"</span>, name_tmp);<br>		<span class="hljs-built_in">free</span>(name_tmp);<br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"    - Import Lookup Table (ILT): 0x%X (RVA), 0x%X (RAW)\n"</span>,<br>			import_dir_table_entries[i].DUMMYUNIONNAME.OriginalFirstThunk,<br>			<span class="hljs-built_in">va_to_raw</span>(import_dir_table_entries[i].DUMMYUNIONNAME.OriginalFirstThunk));<br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"    - Import Address Table (IAT): 0x%X (RVA), 0x%X (RAW)\n"</span>,<br>			import_dir_table_entries[i].FirstThunk,<br>			<span class="hljs-built_in">va_to_raw</span>(import_dir_table_entries[i].FirstThunk));<br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"    - Bound?: %s\n"</span>, import_dir_table_entries[i].TimeDateStamp ? <span class="hljs-string">"TRUE"</span> : <span class="hljs-string">"FALSE"</span>);<br><br><br>		<span class="hljs-comment">// ILT和IAT值在PE加载前是一样的，随便读取哪一个都行</span><br>		<span class="hljs-comment">// 解析具体函数名</span><br>	    <span class="hljs-comment">// https://learn.microsoft.com/zh-cn/windows/win32/debug/pe-format#the-idata-section</span><br><br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"    - Entries: \n\n"</span>);<br><br>		<span class="hljs-keyword">for</span> (j = <span class="hljs-number">0</span>; ; j++) {<br>			<span class="hljs-built_in">fseek</span>(pe_fp, <span class="hljs-built_in">va_to_raw</span>(import_dir_table_entries[i].FirstThunk + j * <span class="hljs-built_in">sizeof</span>(DWORD)), SEEK_SET);<br>			<span class="hljs-built_in">fread</span>(&amp;name_rva, <span class="hljs-built_in">sizeof</span>(DWORD), <span class="hljs-number">1</span>, pe_fp);<br>			<span class="hljs-keyword">if</span> (name_rva == <span class="hljs-number">0</span>) <span class="hljs-keyword">break</span>;<br>			<span class="hljs-keyword">if</span> (!(name_rva &amp; <span class="hljs-number">0x80000000</span>)) {<br>				<span class="hljs-built_in">fseek</span>(pe_fp, <span class="hljs-built_in">va_to_raw</span>(name_rva), SEEK_SET);<br>				<span class="hljs-built_in">fread</span>(&amp;hint, <span class="hljs-built_in">sizeof</span>(___IMAGE_IMPORT_BY_NAME), <span class="hljs-number">1</span>, pe_fp);<br>				hint.Name[<span class="hljs-number">99</span>] = <span class="hljs-number">0</span>; <span class="hljs-comment">// 防止越界读</span><br>				<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"       [%02d] Name: %s\n            Hint: 0x%X\n            Call via: 0x%X (RVA)\n"</span>,<br>					j + <span class="hljs-number">1</span>, hint.Name, hint.Hint, <br>					import_dir_table_entries[i].FirstThunk + j * <span class="hljs-built_in">sizeof</span>(DWORD));<br>			}<br>			<span class="hljs-keyword">else</span> {<br>				<span class="hljs-comment">// 按照序号导入</span><br>				<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"       [%d] Ordinal: 0x%X\n"</span>, j + <span class="hljs-number">1</span>, name_rva &amp; <span class="hljs-number">0xffff</span>);<br>			}<br>		}<br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"\n"</span>);<br>	}<br><br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"\n==========END=========\n\n"</span>);<br><br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>运行结果：</li>
+</ul>
+<p><img src="/2023/08/03/%E4%B8%80%E6%AD%A5%E4%B8%80%E6%AD%A5%E6%89%8B%E6%90%93%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84PE%E8%A7%A3%E6%9E%90%E5%99%A8/11.png" srcset="/img/loading.gif" lazyload></p>
+<h3 id="Step-3-2-解析PE导出表（-edata）"><a href="#Step-3-2-解析PE导出表（-edata）" class="headerlink" title="Step 3.2: 解析PE导出表（.edata）"></a>Step 3.2: 解析PE导出表（.edata）</h3><ul>
+<li><code>.edata</code>包含有关其他镜像可以通过动态链接访问的符号信息，通常包含在DLL中[14]。</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th align="left">表名称</th>
+<th align="left">说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">导出目录表</td>
+<td align="left">只有一行的表（与调试目录不同）。 此表指示其他导出表的位置和大小。</td>
+</tr>
+<tr>
+<td align="left">导出地址表</td>
+<td align="left">导出符号的 RVA 数组。 这些是可执行代码和数据节中的导出函数和数据的实际地址。 其他映像文件可以使用此表的索引（序号）或者（可选）使用与序号对应的公共名称（如果定义了公共名称）导入符号。</td>
+</tr>
+<tr>
+<td align="left">名称指针表</td>
+<td align="left">指向公共导出名称的指针数组，按升序排序。</td>
+</tr>
+<tr>
+<td align="left">序号表</td>
+<td align="left">对应于名称指针表的成员的序号数组。 对应关系按位置，因此，名称指针表和序号表的成员数必须相同。 每个序号都是导出地址表中的索引。</td>
+</tr>
+<tr>
+<td align="left">导出名称表</td>
+<td align="left">一系列以 null 结尾的 ASCII 字符串。 名称指针表的成员指向此区域。 这些名称是用于导入和导出符号的公共名称，它们不一定与映像文件中使用的专用名称相同。</td>
+</tr>
+</tbody></table>
+<hr>
+<p><strong>1. 导出目录表</strong></p>
+<ul>
+<li>字段如下所示[14]，其中重要的字段已加粗处理：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th align="left">偏移量</th>
+<th align="left">大小</th>
+<th align="left">字段</th>
+<th align="left">说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">0</td>
+<td align="left">4</td>
+<td align="left">导出标志</td>
+<td align="left">保留，必须为 0。</td>
+</tr>
+<tr>
+<td align="left">4</td>
+<td align="left">4</td>
+<td align="left">时间/日期戳</td>
+<td align="left">创建导出数据的时间和日期。</td>
+</tr>
+<tr>
+<td align="left">8</td>
+<td align="left">2</td>
+<td align="left">主要版本</td>
+<td align="left">主版本号。 用户可以设置主要版本号和次要版本号。</td>
+</tr>
+<tr>
+<td align="left">10</td>
+<td align="left">2</td>
+<td align="left">次要版本</td>
+<td align="left">次版本号。</td>
+</tr>
+<tr>
+<td align="left">12</td>
+<td align="left">4</td>
+<td align="left"><strong>名称 RVA</strong></td>
+<td align="left">包含 DLL 名称的 ASCII 字符串的地址。 此地址相对于映像基址。</td>
+</tr>
+<tr>
+<td align="left">16</td>
+<td align="left">4</td>
+<td align="left"><strong>序号基</strong></td>
+<td align="left">此映像中的导出的起始序号。 此字段指定导出地址表的起始序号。 <strong>通常设置为 1。</strong></td>
+</tr>
+<tr>
+<td align="left">20</td>
+<td align="left">4</td>
+<td align="left"><strong>地址表条目</strong></td>
+<td align="left">导出地址表中的条目数。</td>
+</tr>
+<tr>
+<td align="left">24</td>
+<td align="left">4</td>
+<td align="left"><strong>名称指针数</strong></td>
+<td align="left">名称指针表中的条目数。 也是序号表中的条目数。</td>
+</tr>
+<tr>
+<td align="left">28</td>
+<td align="left">4</td>
+<td align="left"><strong>导出地址表 RVA</strong></td>
+<td align="left">导出地址表相对于映像基址的地址。</td>
+</tr>
+<tr>
+<td align="left">32</td>
+<td align="left">4</td>
+<td align="left"><strong>名称指针 RVA</strong></td>
+<td align="left">导出名称指针表相对于映像基址的地址。 表大小由“名称指针数”字段给出。</td>
+</tr>
+<tr>
+<td align="left">36</td>
+<td align="left">4</td>
+<td align="left"><strong>序号表RVA</strong></td>
+<td align="left">序号表相对于映像基址的地址。</td>
+</tr>
+</tbody></table>
+<p><strong>2. 导出地址表EAT</strong></p>
+<ul>
+<li>可以把EAT理解为一个存放导出地址的RVA数组（4字节为一个RVA），然后根据RVA去找到具体符号的导出地址</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th align="left">偏移</th>
+<th align="left">大小</th>
+<th align="left">字段</th>
+<th align="left">说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">0</td>
+<td align="left">4</td>
+<td align="left">导出RVA</td>
+<td align="left">加载到内存中时导出符号相对于映像基址的地址。 例如，<strong>导出函数的地址</strong>。</td>
+</tr>
+<tr>
+<td align="left">0</td>
+<td align="left">4</td>
+<td align="left">转发器 RVA</td>
+<td align="left">指向导出节中以 null 结尾的 ASCII 字符串的指针。 此字符串必须在导出表数据目录条目给定的范围内。</td>
+</tr>
+</tbody></table>
+<p><strong>3. 名称指针RVA</strong></p>
+<ul>
+<li>这个也是一个存放名称字符串RVA（4字节）的数组，这个数组是乱序的，如果要恢复其顺序，则需要使用序号表RVA中的信息</li>
+</ul>
+<p><strong>4. 序号表</strong></p>
+<ul>
+<li><p>序号表顺序与名称指针表顺序一致，与导出地址表顺序不一致，需要根据序号表进行恢复。</p>
+</li>
+<li><p>存储符号顺序的表，为<strong>16位</strong>无偏索引数组；这里需要注意的是，真正的（biased）序号等于导出目录表中的序号基 + 该16位无偏值</p>
+</li>
+<li><p>举个例子，序号表第一个16位为03，而相应的名称指针数组第一个RVA所表示的字符串<code>AboutDlgProc</code>，序号基为01，那么上述信息可表述为序号04的函数为<code>AboutDlgProc</code>，其导出地址为导出地址表中第<strong>4</strong>个值 <code>9840</code>。</p>
+</li>
+<li><p>图解整个寻址流程：</p>
+</li>
+</ul>
+<p><img src="/2023/08/03/%E4%B8%80%E6%AD%A5%E4%B8%80%E6%AD%A5%E6%89%8B%E6%90%93%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84PE%E8%A7%A3%E6%9E%90%E5%99%A8/1.svg" srcset="/img/loading.gif" lazyload></p>
+<hr>
+<ul>
+<li><p>解析流程：</p>
+<ul>
+<li><p>先解析导出目录表，得到导出表的名称指针，并取得其名称；</p>
+</li>
+<li><p>其次，由于导出表项的序号是乱序的，因此我们构建了一个导出表项的实体用来存储导出表项的内容，如下：</p>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-keyword">typedef</span> <span class="hljs-keyword">struct</span> <span class="hljs-title class_">__EXPORT_ENTRY</span> {<br>	WORD  ordinal;<br>	DWORD function_rva;<br>	DWORD name_rva;<br>	<span class="hljs-type">char</span>  name[<span class="hljs-number">100</span>];<br>}EXPORT_ENTRY, *PEXPORT_ENTRY;<br></code></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>然后，我们根据导出表项的地址表条目数[<code>NumberOfFunctions</code>]来创建指定个数的导出表项实体，并根据导出目录表中的名称指针表和序号表的内容找到指定的导出表实体，并更新其字段内容；</p>
+</li>
+<li><p>最后，将更新后的导出表实体按照ordinal的顺序打印出来</p>
+</li>
+</ul>
+</li>
+<li><p>处理代码：</p>
+</li>
+</ul>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">PE32::parse_export_directory</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>{<br>	<span class="hljs-type">size_t</span> read_size;<br>	<span class="hljs-keyword">if</span> (!export_dir_table_size || !export_dir_table_rva) <span class="hljs-keyword">return</span>;<br><br>	<span class="hljs-built_in">fseek</span>(pe_fp, <span class="hljs-built_in">va_to_raw</span>(export_dir_table_rva), SEEK_SET);<br>	read_size = <span class="hljs-built_in">fread</span>(&amp;export_dir_table, <span class="hljs-built_in">sizeof</span>(___IMAGE_EXPORT_DIRECTORY), <span class="hljs-number">1</span>, pe_fp);<br>	<span class="hljs-keyword">if</span> (read_size != <span class="hljs-number">1</span>) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Bad PE file!\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br><br>	<span class="hljs-comment">// 其他操作就让print函数去完成:))</span><br><br>}<br><br><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">PE32::print_export_table_info</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>{<br>	<span class="hljs-type">size_t</span> read_size;<br>	DWORD name_offset, name_size, i;<br>	DWORD* name_p_table, *export_address_table;<br>	WORD* ord_table;<br>	<span class="hljs-type">char</span> *name_tmp, ch;<br>	PEXPORT_ENTRY export_entries;<br><br>	<span class="hljs-keyword">if</span> (!export_dir_table_size || !export_dir_table_rva) {<br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"====No export table===\n\n"</span>);<br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"\n==========END=========\n\n"</span>);<br>		<span class="hljs-keyword">return</span>;<br>	}<br><br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"======Export table====\n\n"</span>);<br><br>	<span class="hljs-comment">// 先解析导出目录表</span><br>	<span class="hljs-comment">// 1. 先解析导出表名称</span><br>	name_offset = <span class="hljs-built_in">va_to_raw</span>(export_dir_table.Name);<br>	<span class="hljs-built_in">fseek</span>(pe_fp, name_offset, SEEK_SET);<br>	<br>	name_size = <span class="hljs-number">0</span>;<br>	ch = <span class="hljs-built_in">fgetc</span>(pe_fp);<br>	<span class="hljs-keyword">while</span> (ch != EOF &amp;&amp; ch != <span class="hljs-number">0</span>) {<br>		<span class="hljs-keyword">if</span> (++name_size &gt; <span class="hljs-number">256</span>) {<br>			<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: DLL's name too long?!\n"</span>);<br>			<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>		}<br>		ch = <span class="hljs-built_in">fgetc</span>(pe_fp);<br>	}<br><br>	name_tmp = (<span class="hljs-type">char</span>*)<span class="hljs-built_in">malloc</span>(name_size + <span class="hljs-number">1</span>);<br>	<span class="hljs-keyword">if</span> (!name_tmp) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Name_tmp malloc failed!\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br>	name_tmp[name_size] = <span class="hljs-number">0</span>;<br>	<span class="hljs-built_in">fseek</span>(pe_fp, name_offset, SEEK_SET);<br>	<span class="hljs-built_in">fread</span>(name_tmp, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">char</span>), name_size, pe_fp);<br><br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">" - Name: %s (raw offset: 0x%X)\n"</span>, name_tmp, name_offset);<br>	<span class="hljs-built_in">free</span>(name_tmp);<br><br>	<span class="hljs-comment">// 2.解析各个导出项</span><br>	<span class="hljs-comment">// 先构造自定义的实体</span><br><br>	<span class="hljs-keyword">if</span> (export_dir_table.NumberOfFunctions &lt; export_dir_table.NumberOfNames) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Seriously?! Bad PE file!\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br><br>	<span class="hljs-keyword">if</span> (export_dir_table.NumberOfFunctions &gt; <span class="hljs-number">0xFFFF</span>) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Too many functions exported (&gt;65535).\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br><br>	export_entries = (PEXPORT_ENTRY)<span class="hljs-built_in">malloc</span>(<span class="hljs-built_in">sizeof</span>(EXPORT_ENTRY) * export_dir_table.NumberOfFunctions);<br><br>	<span class="hljs-comment">// 解析导出地址表</span><br>	export_address_table = (DWORD*)<span class="hljs-built_in">malloc</span>(<span class="hljs-built_in">sizeof</span>(DWORD) * export_dir_table.NumberOfFunctions);<br>	<span class="hljs-built_in">fseek</span>(pe_fp, <span class="hljs-built_in">va_to_raw</span>(export_dir_table.AddressOfFunctions), SEEK_SET);<br>	read_size = <span class="hljs-built_in">fread</span>(export_address_table, <span class="hljs-built_in">sizeof</span>(DWORD), export_dir_table.NumberOfFunctions, pe_fp);<br><br>	<span class="hljs-keyword">if</span> (read_size ^ export_dir_table.NumberOfFunctions) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Bad PE file!\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br><br>	<span class="hljs-comment">// 初始化</span><br>	<span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i &lt; export_dir_table.NumberOfFunctions; i++) {<br>		export_entries[i].ordinal = export_dir_table.Base + i;<br>		export_entries[i].function_rva = export_address_table[i];<br>		export_entries[i].name_rva = <span class="hljs-number">0</span>;<br>	}<br><br>	<span class="hljs-built_in">free</span>(export_address_table);<br><br>	<span class="hljs-comment">// 解析名称指针表和序号表</span><br><br>	name_p_table = (DWORD*)<span class="hljs-built_in">malloc</span>(<span class="hljs-built_in">sizeof</span>(DWORD) * export_dir_table.NumberOfNames);<br>	ord_table = (WORD*)<span class="hljs-built_in">malloc</span>(<span class="hljs-built_in">sizeof</span>(WORD) * export_dir_table.NumberOfNames);<br><br>	<span class="hljs-keyword">if</span> (!name_p_table || !ord_table) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Name_p_table or ord_table malloc failed!\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br><br>	<span class="hljs-built_in">fseek</span>(pe_fp, <span class="hljs-built_in">va_to_raw</span>(export_dir_table.AddressOfNames), SEEK_SET);<br>	read_size = <span class="hljs-built_in">fread</span>(name_p_table, <span class="hljs-built_in">sizeof</span>(DWORD), export_dir_table.NumberOfNames, pe_fp);<br><br>	<span class="hljs-built_in">fseek</span>(pe_fp, <span class="hljs-built_in">va_to_raw</span>(export_dir_table.AddressOfNameOrdinals), SEEK_SET);<br>	read_size ^= <span class="hljs-built_in">fread</span>(ord_table, <span class="hljs-built_in">sizeof</span>(WORD), export_dir_table.NumberOfNames, pe_fp);<br><br>	<span class="hljs-keyword">if</span> (read_size) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Bad PE file!\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br>	<br>	<span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i &lt; export_dir_table.NumberOfNames; i++) {<br><br>		WORD offset = *(WORD*)(ord_table + i);<br><br>		<span class="hljs-keyword">if</span> (offset &gt; export_dir_table.NumberOfFunctions) {<br>			<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Bad PE file!\n"</span>);<br>			<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>		}<br><br>		export_entries[offset].name_rva = *(DWORD*)(name_p_table + i);<br>		name_offset = <span class="hljs-built_in">va_to_raw</span>(*(DWORD*)(name_p_table + i));<br>		<span class="hljs-built_in">fseek</span>(pe_fp, name_offset, SEEK_SET);<br><br>		name_size = <span class="hljs-number">0</span>;<br>		ch = <span class="hljs-built_in">fgetc</span>(pe_fp);<br>		<span class="hljs-keyword">while</span> (ch != EOF &amp;&amp; ch != <span class="hljs-number">0</span>) {<br>			<span class="hljs-keyword">if</span> (++name_size &gt; <span class="hljs-number">99</span>) {<br>				<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Function's name too long?!\n"</span>);<br>				<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>			}<br>			ch = <span class="hljs-built_in">fgetc</span>(pe_fp);<br>		}<br><br>		name_tmp = (<span class="hljs-type">char</span>*)<span class="hljs-built_in">malloc</span>(name_size + <span class="hljs-number">1</span>);<br>		<span class="hljs-keyword">if</span> (!name_tmp) {<br>			<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Name_tmp malloc failed!\n"</span>);<br>			<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>		}<br>		name_tmp[name_size] = <span class="hljs-number">0</span>;<br>		<span class="hljs-built_in">fseek</span>(pe_fp, name_offset, SEEK_SET);<br>		<span class="hljs-built_in">fread</span>(name_tmp, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">char</span>), name_size, pe_fp);<br><br>		<span class="hljs-built_in">memcpy</span>(export_entries[offset].name, name_tmp, name_size + <span class="hljs-number">1</span>);<br>		<span class="hljs-built_in">free</span>(name_tmp);<br><br>	}<br>	<br>	<span class="hljs-built_in">free</span>(name_p_table);<br>	<span class="hljs-built_in">free</span>(ord_table);<br><br>	<span class="hljs-comment">// 打印</span><br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">" - Export Entries:\n\n"</span>);<br>	<span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i &lt; export_dir_table.NumberOfFunctions; i++) {<br>		<br>		<span class="hljs-keyword">if</span> (!export_entries[i].function_rva)<br>			<span class="hljs-built_in">memcpy</span>(export_entries[i].name, <span class="hljs-string">"-"</span>, <span class="hljs-number">2</span>);	<br>		<span class="hljs-keyword">else</span><br>			export_entries[i].name[<span class="hljs-number">99</span>] = <span class="hljs-number">0</span>;  <span class="hljs-comment">// 防止越界读</span><br><br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"    [%02d] Ordinal: %d\n"</span><br>			<span class="hljs-string">"           Function RVA: 0x%X\n"</span><br>			<span class="hljs-string">"           Name: %s (RVA: 0x%X)\n\n"</span>,<br>			i + <span class="hljs-number">1</span>, export_entries[i].ordinal, export_entries[i].function_rva, <br>			export_entries[i].name, export_entries[i].name_rva);<br>	}<br>	<br><br>	<span class="hljs-built_in">free</span>(export_entries);<br><br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"\n==========END=========\n\n"</span>);<br><br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>运行结果：</li>
+</ul>
+<p><img src="/2023/08/03/%E4%B8%80%E6%AD%A5%E4%B8%80%E6%AD%A5%E6%89%8B%E6%90%93%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84PE%E8%A7%A3%E6%9E%90%E5%99%A8/13.png" srcset="/img/loading.gif" lazyload></p>
+<h3 id="Step-3-3-解析重定位表（-reloc）"><a href="#Step-3-3-解析重定位表（-reloc）" class="headerlink" title="Step 3.3: 解析重定位表（.reloc）"></a>Step 3.3: 解析重定位表（.reloc）</h3><ul>
+<li><p>需要重定位表的原因[7]：</p>
+<ul>
+<li><p>在PE程序载入到内存中时，PE Loader会优先按照<code>ImageBase</code>（该PE文件渴望的虚拟基地址），但就和人生一样，有时候你想要得到的不一定就能够得到，所以当该<code>ImageBase</code>的地址被占用的时候，该PE程序就不能加载到<code>ImageBase</code>的虚拟地址</p>
+</li>
+<li><p><code>.text</code>汇编码中包含有一些字符串地址、函数调用地址等，而这些地址都是由编译器根据<code>ImageBase</code>预先确定好的，如果PE不能加载到<code>ImageBase</code>所指向的虚拟地址时，上述这些地址均需要做修正（i.e. fix up）。</p>
+<p><span class="github-emoji"><span>🌰</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f330.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 举个例子：</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs assembly">// 需要重定位的值013EBC98h、013ED49Ch和013E1064h<br>printf("Helloworld %s", "hahaha");<br>013E64B2 68 98 BC 3E 01       push        offset string "hahaha" (013EBC98h) <br>013E64B7 68 9C D4 3E 01       push        offset string "Helloworld %s" (013ED49Ch) <br>013E64BC E8 A3 AB FF FF       call        _printf (013E1064h) <br>013E64C1 83 C4 08             add         esp,8<br></code></pre></td></tr></tbody></table></figure></li>
+</ul>
+</li>
+<li><p>重定位表的作用[15]：</p>
+<ul>
+<li>修复地址（仅当<code>ImageBase</code>地址无法满足时）<ul>
+<li>如何修复？<code>fix_up_value = origin_value - ImageBase + new_virtual_address_base</code></li>
+</ul>
+</li>
+</ul>
+<p><span class="github-emoji"><span>⭐</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/2b50.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 强烈建议阅读[15]这一篇文章，很详细介绍了重定位表的作用！</p>
+</li>
+<li><p>PE Section中重定位块[16]</p>
+<ul>
+<li>基址重定位块</li>
+<li>基址重定位类型</li>
+</ul>
+</li>
+</ul>
+<hr>
+<p><strong>1. 基址重定位块</strong></p>
+<ul>
+<li><p>重定位表</p>
+</li>
+<li><p>布局：</p>
+</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>偏移</th>
+<th>大小</th>
+<th>字段</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0</td>
+<td>4</td>
+<td>页RVA</td>
+<td>映像基址和页 RVA 将添加到每个偏移量，以创建必须应用基址重定位的 VA。</td>
+</tr>
+<tr>
+<td>4</td>
+<td>4</td>
+<td>块大小</td>
+<td>映像基址和页 RVA 将添加到每个偏移量，以创建必须应用基址重定位的 VA。</td>
+</tr>
+<tr>
+<td>4</td>
+<td>2</td>
+<td>条目1</td>
+<td>高4位为类型，剩余12位相较于页RVA的偏移量</td>
+</tr>
+<tr>
+<td>6</td>
+<td>8</td>
+<td>条目2</td>
+<td></td>
+</tr>
+<tr>
+<td>…</td>
+<td>…</td>
+<td>…</td>
+<td></td>
+</tr>
+</tbody></table>
+<p><strong>2.基址重定位类型</strong></p>
+<table>
+<thead>
+<tr>
+<th align="left">常数</th>
+<th align="left">Value</th>
+<th align="left">说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">IMAGE_REL_BASED_ABSOLUTE</td>
+<td align="left">0</td>
+<td align="left">跳过基址重定位。 此类型可用于填充块。</td>
+</tr>
+<tr>
+<td align="left">IMAGE_REL_BASED_HIGH</td>
+<td align="left">1</td>
+<td align="left">基址重定位会将差值的高 16 位添加到偏移量的 16 位字段。 16 位字段表示 32 位字的高值。</td>
+</tr>
+<tr>
+<td align="left">IMAGE_REL_BASED_LOW</td>
+<td align="left">2</td>
+<td align="left">基址重定位会将差值的低 16 位添加到偏移量为 16 位字段。 16 位字段表示 32 位字的低半部分。</td>
+</tr>
+<tr>
+<td align="left">IMAGE_REL_BASED_HIGHLOW</td>
+<td align="left">3</td>
+<td align="left">基址重定位会将差值的所有 32 位应用到偏移量的 32 位字段。</td>
+</tr>
+<tr>
+<td align="left">IMAGE_REL_BASED_HIGHADJ</td>
+<td align="left">4</td>
+<td align="left">基址重定位会将差值的高 16 位添加到偏移量的 16 位字段。 16 位字段表示 32 位字的高值。 32 位值的低 16 位存储在此基址重定位后的 16 位字中。 这意味着此基址重定位占用两个槽位。</td>
+</tr>
+<tr>
+<td align="left">IMAGE_REL_BASED_MIPS_JMPADDR</td>
+<td align="left">5</td>
+<td align="left">重定位解释取决于计算机类型。 当计算机类型为 MIPS 时，则基址重定位适用于 MIPS 跳转指令。</td>
+</tr>
+<tr>
+<td align="left">IMAGE_REL_BASED_ARM_MOV32</td>
+<td align="left">5</td>
+<td align="left">仅当计算机类型为 ARM 或 Thumb 时，此重定位才有意义。 基址重定位跨连续的 MOVW/MOVT 指令对应用符号的 32 位地址。</td>
+</tr>
+<tr>
+<td align="left">IMAGE_REL_BASED_RISCV_HIGH20</td>
+<td align="left">5</td>
+<td align="left">仅当计算机类型为 RISC-V 时，此重定位才有意义。 基址重定位适用于 32 位绝对地址的高 20 位。</td>
+</tr>
+<tr>
+<td align="left"></td>
+<td align="left">6</td>
+<td align="left">保留，必须为 0。</td>
+</tr>
+<tr>
+<td align="left">IMAGE_REL_BASED_THUMB_MOV32</td>
+<td align="left">7</td>
+<td align="left">仅当计算机类型为 Thumb 时，此重定位才有意义。 基址重定位将符号的 32 位地址应用于连续的 MOVW/MOVT 指令对。</td>
+</tr>
+<tr>
+<td align="left">IMAGE_REL_BASED_RISCV_LOW12I</td>
+<td align="left">7</td>
+<td align="left">仅当计算机类型为 RISC-V 时，此重定位才有意义。 基址重定位适用于以 RISC-V I 型指令格式形成的 32 位绝对地址的低 12 位。</td>
+</tr>
+<tr>
+<td align="left">IMAGE_REL_BASED_RISCV_LOW12S</td>
+<td align="left">8</td>
+<td align="left">仅当计算机类型为 RISC-V 时，此重定位才有意义。 基址重定位适用于以 RISC-V S 型指令格式形成的 32 位绝对地址的低 12 位。</td>
+</tr>
+<tr>
+<td align="left">IMAGE_REL_BASED_LOONGARCH32_MARK_LA</td>
+<td align="left">8</td>
+<td align="left">仅当计算机类型为 LoongArch 32 位时，此重定位才有意义。 基址重定位适用于由两个连续指令形成的 32 位绝对地址。</td>
+</tr>
+<tr>
+<td align="left">IMAGE_REL_BASED_LOONGARCH64_MARK_LA</td>
+<td align="left">8</td>
+<td align="left">仅当计算机类型为 LoongArch 64 位时，此重定位才有意义。 基址重定位适用于由四个连续指令形成的 64 位绝对地址。</td>
+</tr>
+<tr>
+<td align="left">IMAGE_REL_BASED_MIPS_JMPADDR16</td>
+<td align="left">9</td>
+<td align="left">仅当计算机类型为 MIPS 时，此重定位才有意义。 基址重定位适用于 MIPS16 跳转指令。</td>
+</tr>
+<tr>
+<td align="left">IMAGE_REL_BASED_DIR64</td>
+<td align="left">10</td>
+<td align="left">基址重定位会将差值应用到偏移量的 64 位字段。</td>
+</tr>
+</tbody></table>
+<hr>
+<ul>
+<li><p>解析流程：</p>
+<ul>
+<li>首先，根据<code>NT Header - Optional Header - Data Directory</code>中的<code>Base Relocation Table</code>字段的RVA值，找到重定向表的位置</li>
+<li>然后，根据基址重定位块的布局结构，依次解析相应的内容</li>
+<li>最后，打印相应的内容即可</li>
+</ul>
+</li>
+<li><p>处理代码：</p>
+</li>
+</ul>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">PE32::parse_basereloc_table</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>{<br>	<span class="hljs-type">size_t</span> read_size;<br>	DWORD basereloc_offset, basereloc_entry_num, i;<br>	<span class="hljs-type">int</span> left_size;<br>	___IMAGE_BASE_RELOCATION tmp;<br><br>	<span class="hljs-keyword">if</span> (!basereloc_dir_table_rva || !basereloc_dir_table_size) <span class="hljs-keyword">return</span>;<br><br>	basereloc_offset = <span class="hljs-built_in">va_to_raw</span>(basereloc_dir_table_rva);<br>	<span class="hljs-built_in">fseek</span>(pe_fp, basereloc_offset, SEEK_SET);<br>	left_size = basereloc_dir_table_size;<br>	basereloc_entry_num = <span class="hljs-number">0</span>;<br>	<br>	<span class="hljs-keyword">while</span> (<span class="hljs-number">1</span>) {<br>		<br>		read_size = <span class="hljs-built_in">fread</span>(&amp;tmp, <span class="hljs-built_in">sizeof</span>(___IMAGE_BASE_RELOCATION), <span class="hljs-number">1</span>, pe_fp);<br>		<span class="hljs-keyword">if</span> (read_size != <span class="hljs-number">1</span>) {<br>			<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Bad PE file!\n"</span>);<br>			<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>		}<br><br>		<span class="hljs-keyword">if</span> (!tmp.VirtualAddress &amp;&amp; !tmp.SizeOfBlock) <span class="hljs-keyword">break</span>;<br><br>		basereloc_entry_num++;<br>		left_size -= tmp.SizeOfBlock;<br>		<span class="hljs-keyword">if</span> (left_size &lt; <span class="hljs-number">0</span>) {<br>			<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Out of base relocation table's size. Maybe Bad PE file!\n"</span>);<br>			<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>		}<br>		<br>		basereloc_offset += tmp.SizeOfBlock;<br>		<span class="hljs-built_in">fseek</span>(pe_fp, basereloc_offset, SEEK_SET);<br><br>	}<br><br>	<span class="hljs-keyword">if</span> (basereloc_entry_num &gt; <span class="hljs-number">0xFFFFFF</span>) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Too many base relocation entries!\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br><br>	basereloc_table_num = basereloc_entry_num;<br><br>	basereloc_table =<br>		(___PIMAGE_BASE_RELOCATION)<span class="hljs-built_in">malloc</span>(<span class="hljs-built_in">sizeof</span>(___IMAGE_BASE_RELOCATION) * basereloc_entry_num);<br>	<span class="hljs-keyword">if</span> (!basereloc_table) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Basereloc_table malloc failed!\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br><br>	basereloc_offset = <span class="hljs-built_in">va_to_raw</span>(basereloc_dir_table_rva);<br>	<span class="hljs-built_in">fseek</span>(pe_fp, basereloc_offset, SEEK_SET);<br><br>	<span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i &lt; basereloc_entry_num; i++) {<br>		<span class="hljs-built_in">fread</span>(&amp;basereloc_table[i], <span class="hljs-built_in">sizeof</span>(___IMAGE_BASE_RELOCATION), <span class="hljs-number">1</span>, pe_fp);<br>		basereloc_offset += basereloc_table[i].SizeOfBlock;<br>		<span class="hljs-built_in">fseek</span>(pe_fp, basereloc_offset, SEEK_SET);<br>	}<br><br>}<br><br><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">PE32::print_basereloc_table_info</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>{<br>	DWORD i, j, basereloc_offset, block_entries_num;<br>	WORD  value;<br>	<span class="hljs-keyword">if</span> (!basereloc_dir_table_rva || !basereloc_dir_table_size) {<br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"===No base relocation table===\n\n"</span>);<br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"\n==========END=========\n\n"</span>);<br>		<span class="hljs-keyword">return</span>;<br>	}<br><br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"===Base relocation table===\n\n"</span>);<br><br>	<span class="hljs-built_in">fseek</span>(pe_fp, <span class="hljs-built_in">va_to_raw</span>(basereloc_dir_table_rva), SEEK_SET);<br><br>	<span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i &lt; basereloc_table_num; i++) {<br><br>		block_entries_num = (basereloc_table[i].SizeOfBlock - <span class="hljs-number">8</span>) / <span class="hljs-number">2</span>;<br><br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"  * Block %02d:\n\n"</span>, i + <span class="hljs-number">1</span>);<br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"    - Page RVA: 0x%X\n"</span>, basereloc_table[i].VirtualAddress);<br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"    - Block Size: 0x%X\n"</span>, basereloc_table[i].SizeOfBlock);<br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"    - Entries [total %d]:\n\n"</span>, block_entries_num);<br><br>		<span class="hljs-built_in">fseek</span>(pe_fp, <span class="hljs-number">8</span>, SEEK_CUR);<br><br>		<span class="hljs-keyword">for</span> (j = <span class="hljs-number">0</span>; j &lt; block_entries_num; j++) {<br>			<span class="hljs-comment">// 请注意，fread遇到0x1A (ctrl-Z) 终止，读入文件需要以二进制的形式打开</span><br>			<span class="hljs-built_in">fread</span>(&amp;value, <span class="hljs-built_in">sizeof</span>(WORD), <span class="hljs-number">1</span>, pe_fp);<br>			<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"       [%03d] Value: 0x%04X\n"</span>, j+<span class="hljs-number">1</span>, value);<br>			<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"             Type : %s\n"</span>, <span class="hljs-built_in">translate_block_entry_types</span>((value &amp; <span class="hljs-number">0xf000</span>) &gt;&gt; <span class="hljs-number">12</span>, nt_headers_machine));<br>			<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"  Offset from Page: 0x%X\n"</span>, value &amp; <span class="hljs-number">0x0fff</span>);<br>			<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"         Reloc RVA: 0x%X\n\n"</span>, basereloc_table[i].VirtualAddress + (value &amp; <span class="hljs-number">0x0fff</span>));<br>		}<br><br>	}<br><br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"\n==========END=========\n\n"</span>);<br><br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<h3 id="Step-3-4-解析资源表（-rsrc）"><a href="#Step-3-4-解析资源表（-rsrc）" class="headerlink" title="Step 3.4: 解析资源表（.rsrc）"></a>Step 3.4: 解析资源表（.rsrc）</h3><ul>
+<li><p>资源表是干啥的？</p>
+<ul>
+<li>资源表存储着与GUI显示有关的元数据，也就是所谓的资源，包括光标、图标、菜单、位图等</li>
+</ul>
+</li>
+<li><p>资源表的结构：</p>
+<ul>
+<li>三层树结构</li>
+</ul>
+<p><img src="/2023/08/03/%E4%B8%80%E6%AD%A5%E4%B8%80%E6%AD%A5%E6%89%8B%E6%90%93%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84PE%E8%A7%A3%E6%9E%90%E5%99%A8/1.gif" srcset="/img/loading.gif" lazyload></p>
+</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th align="left">数据</th>
+<th align="left">说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">资源目录表（和资源目录条目）</td>
+<td align="left">一系列表，树中每组节点对应一个表。 第一个表中列出了所有第一级（类型）节点。 此表中的条目指向第二级表。 每二级树具有相同的类型 ID，但名称 ID 不同。 第三级树具有相同的类型和名称 ID，但语言 ID 不同。 每个单独的表后紧跟目录条目，其中每个条目都有一个名称或数字标识符，以及一个指向数据描述或下一级表的指针。</td>
+</tr>
+<tr>
+<td align="left">资源目录字符串</td>
+<td align="left">双字节对齐的 Unicode 字符串，用作目录条目指向的字符串数据。</td>
+</tr>
+<tr>
+<td align="left">资源数据描述</td>
+<td align="left">由表指向的记录数组，用于描述资源数据的实际大小和位置。 这些记录是资源描述树中的叶。</td>
+</tr>
+<tr>
+<td align="left">资源数据</td>
+<td align="left">资源节的原始数据。 资源数据描述字段中的大小和位置信息分隔资源数据的各个区域。</td>
+</tr>
+</tbody></table>
+<hr>
+<p><strong>1. 资源目录表</strong></p>
+<table>
+<thead>
+<tr>
+<th align="left">Offset</th>
+<th align="left">大小</th>
+<th align="left">字段</th>
+<th align="left">说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">0</td>
+<td align="left">4</td>
+<td align="left">特征</td>
+<td align="left">资源标志。 保留此字段供将来使用。 它当前设置为零。</td>
+</tr>
+<tr>
+<td align="left">4</td>
+<td align="left">4</td>
+<td align="left">时间/日期戳</td>
+<td align="left">资源编译器创建资源数据的时间。</td>
+</tr>
+<tr>
+<td align="left">8</td>
+<td align="left">2</td>
+<td align="left">主要版本</td>
+<td align="left">主要版本号，由用户设置。</td>
+</tr>
+<tr>
+<td align="left">10</td>
+<td align="left">2</td>
+<td align="left">次要版本</td>
+<td align="left">次要版本号，由用户设置。</td>
+</tr>
+<tr>
+<td align="left">12</td>
+<td align="left">2</td>
+<td align="left">名称条目数</td>
+<td align="left">紧跟在表之后的目录条目数，这些条目使用字符串来标识类型、名称或语言条目（取决于表的级别）。</td>
+</tr>
+<tr>
+<td align="left">14</td>
+<td align="left">2</td>
+<td align="left">ID 条目数</td>
+<td align="left">紧跟在名称条目之后的目录条目数，这些条目对类型、名称或语言条目使用数字 ID。</td>
+</tr>
+</tbody></table>
+<p><strong>2. 资源目录条目</strong></p>
+<table>
+<thead>
+<tr>
+<th align="left">Offset</th>
+<th align="left">大小</th>
+<th align="left">字段</th>
+<th align="left">说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">0</td>
+<td align="left">4</td>
+<td align="left">名称偏移量</td>
+<td align="left">提供类型、名称或语言 ID 条目的字符串的偏移量，具体取决于表的级别。</td>
+</tr>
+<tr>
+<td align="left">0</td>
+<td align="left">4</td>
+<td align="left">整数标识符</td>
+<td align="left">标识类型、名称或语言 ID 条目的 32 位整数。</td>
+</tr>
+<tr>
+<td align="left">4</td>
+<td align="left">4</td>
+<td align="left">数据条目偏移量</td>
+<td align="left">高位 0。 资源数据条目（叶）的地址。</td>
+</tr>
+<tr>
+<td align="left">4</td>
+<td align="left">4</td>
+<td align="left">子目录偏移量</td>
+<td align="left">高位 1。 较低的 31 位是另一个资源目录表的地址（下一级）。</td>
+</tr>
+</tbody></table>
+<p><strong>3. 资源目录字符串</strong></p>
+<ul>
+<li>存储在最后一个资源目录条目之后和第一个资源数据条目之前</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th align="left">Offset</th>
+<th align="left">大小</th>
+<th align="left">字段</th>
+<th align="left">说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">0</td>
+<td align="left">2</td>
+<td align="left">长度</td>
+<td align="left">字符串的大小，不包括长度字段本身。</td>
+</tr>
+<tr>
+<td align="left">2</td>
+<td align="left">可变</td>
+<td align="left">Unicode 字符串</td>
+<td align="left">可变长度的 Unicode 字符串数据，字对齐。</td>
+</tr>
+</tbody></table>
+<p><strong>4. 资源数据条目</strong></p>
+<table>
+<thead>
+<tr>
+<th align="left">Offset</th>
+<th align="left">大小</th>
+<th align="left">字段</th>
+<th align="left">说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">0</td>
+<td align="left">4</td>
+<td align="left">数据 RVA</td>
+<td align="left">资源数据区域中资源数据单位的地址。</td>
+</tr>
+<tr>
+<td align="left">4</td>
+<td align="left">4</td>
+<td align="left">大小</td>
+<td align="left">数据 RVA 字段指向的资源数据的大小（以字节为单位）。</td>
+</tr>
+<tr>
+<td align="left">8</td>
+<td align="left">4</td>
+<td align="left">codepage</td>
+<td align="left">用于解码资源数据中的码位值的代码页。 通常，代码页将是 Unicode 代码页。</td>
+</tr>
+<tr>
+<td align="left">12</td>
+<td align="left">4</td>
+<td align="left">保留，必须为 0。</td>
+<td align="left"></td>
+</tr>
+</tbody></table>
+<hr>
+<ul>
+<li>解析流程：<ul>
+<li>按序依次解析即可</li>
+</ul>
+</li>
+<li>处理代码：</li>
+</ul>
+<figure class="highlight cpp"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">PE32::parse_resources_table</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>{<br>	<span class="hljs-type">size_t</span> read_size;<br><br>	<span class="hljs-keyword">if</span> (!resource_dir_table_rva || !resource_dir_table_size) <span class="hljs-keyword">return</span>;<br><br>	<span class="hljs-built_in">fseek</span>(pe_fp, <span class="hljs-built_in">va_to_raw</span>(resource_dir_table_rva), SEEK_SET);<br>	read_size = <span class="hljs-built_in">fread</span>(&amp;resource_dir_root, <span class="hljs-built_in">sizeof</span>(___IMAGE_RESOURCE_DIRECTORY), <span class="hljs-number">1</span>, pe_fp);<br><br>	<span class="hljs-keyword">if</span> (read_size != <span class="hljs-number">1</span>) {<br>		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Bad PE file!\n"</span>);<br>		<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>	}<br><br>	<span class="hljs-comment">// 之后的操作就交给print()函数去处理</span><br>}<br><br><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">PE32::print_resources_table_info</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>{<br><br>	<span class="hljs-keyword">if</span> (!resource_dir_table_rva || !resource_dir_table_size) {<br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"=====No resource table=====\n\n"</span>);<br>		<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"\n==========END=========\n\n"</span>);<br>		<span class="hljs-keyword">return</span>;<br>	}<br><br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"=======Resource table======\n\n"</span>);<br><br>	<span class="hljs-type">size_t</span> read_size;<br>	DWORD total_entries_num = resource_dir_root.NumberOfNamedEntries +<br>		resource_dir_root.NumberOfIdEntries;<br>	DWORD i, j;<br>	<br>	___IMAGE_RESOURCE_DIRECTORY_ENTRY tmp_entries_0;<br><br>	DWORD start_pos = <span class="hljs-built_in">va_to_raw</span>(resource_dir_table_rva);<br><br>	<span class="hljs-comment">// 先读取第一层的entries</span><br>	<span class="hljs-comment">// 这里用递归解析是不是更优雅点？（TODO?）</span><br>	<span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i &lt; total_entries_num; i++) {<br><br>		<span class="hljs-built_in">fseek</span>(pe_fp, start_pos + <span class="hljs-built_in">sizeof</span>(__IMAGE_RESOURCE_DIRECTORY) + i * <span class="hljs-built_in">sizeof</span>(___IMAGE_RESOURCE_DIRECTORY_ENTRY), SEEK_SET);<br><br>		read_size = <span class="hljs-built_in">fread</span>(&amp;tmp_entries_0, <span class="hljs-built_in">sizeof</span>(___IMAGE_RESOURCE_DIRECTORY_ENTRY), <span class="hljs-number">1</span>, pe_fp);<br><br>		<span class="hljs-keyword">if</span> (read_size != <span class="hljs-number">1</span>) {<br>			<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Bad PE!\n"</span>);<br>			<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>		}<br><br>		<span class="hljs-keyword">if</span> (tmp_entries_0.DUMMYUNIONNAME.DUMMYSTRUCTNAME.NameIsString) {<br>			<span class="hljs-comment">// 资源ID是字符串</span><br>			<span class="hljs-built_in">fseek</span>(pe_fp, start_pos + tmp_entries_0.DUMMYUNIONNAME.DUMMYSTRUCTNAME.NameOffset, SEEK_SET);<br>			WORD unicode_len;<br>			<span class="hljs-built_in">fread</span>(&amp;unicode_len, <span class="hljs-built_in">sizeof</span>(WORD), <span class="hljs-number">1</span>, pe_fp);<br>			<span class="hljs-type">wchar_t</span>* name_tmp = (<span class="hljs-type">wchar_t</span>*)<span class="hljs-built_in">malloc</span>(<span class="hljs-built_in">sizeof</span>(<span class="hljs-type">wchar_t</span>) * (unicode_len + <span class="hljs-number">1</span>));<br>			<span class="hljs-keyword">if</span> (!name_tmp) {<br>				<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Name_tmp malloc failed!\n"</span>);<br>				<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>			}<br>			name_tmp[unicode_len] = <span class="hljs-number">0</span>;<br>			<span class="hljs-built_in">fread</span>(name_tmp, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">wchar_t</span>), unicode_len, pe_fp);<br>			<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">" * Name Entry: %ws\n"</span>, name_tmp);<br>			<span class="hljs-built_in">free</span>(name_tmp);<br>		}<br>		<span class="hljs-keyword">else</span> {<br>			<span class="hljs-comment">// 资源ID是数字</span><br>			<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">" * ID Entry: %03d\n"</span>, tmp_entries_0.DUMMYUNIONNAME.Id);<br>		}<br><br>		<span class="hljs-comment">// fprintf(stdout, "    - \n");</span><br><br>		<span class="hljs-comment">// 解析第二层</span><br>		<span class="hljs-keyword">if</span> (tmp_entries_0.DUMMYUNIONNAME2.DUMMYSTRUCTNAME2.DataIsDirectory) {<br>			<span class="hljs-comment">// 获取第二级目录表</span><br>			DWORD offset = tmp_entries_0.DUMMYUNIONNAME2.DUMMYSTRUCTNAME2.OffsetToDirectory;<br>			<span class="hljs-built_in">fseek</span>(pe_fp, offset + start_pos, SEEK_SET);<br>			___IMAGE_RESOURCE_DIRECTORY tmp_dir;<br>			<span class="hljs-built_in">fread</span>(&amp;tmp_dir, <span class="hljs-built_in">sizeof</span>(___IMAGE_RESOURCE_DIRECTORY), <span class="hljs-number">1</span>, pe_fp);<br>			DWORD total_entries_num_2 = tmp_dir.NumberOfIdEntries + tmp_dir.NumberOfNamedEntries;<br><br>			<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"    - Entries Count: %d\n"</span>, total_entries_num_2);<br>			<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"    - Subentries:\n"</span>);<br><br>			<span class="hljs-comment">// 依然解析资源名是数字还是字符串</span><br>			<span class="hljs-keyword">for</span> (j = <span class="hljs-number">0</span>; j &lt; total_entries_num_2; j++) {<br><br>				__IMAGE_RESOURCE_DIRECTORY_ENTRY tmp_entries_1;<br>				<span class="hljs-built_in">fseek</span>(pe_fp, offset + start_pos + <span class="hljs-built_in">sizeof</span>(___IMAGE_RESOURCE_DIRECTORY) + j * <span class="hljs-built_in">sizeof</span>(__IMAGE_RESOURCE_DIRECTORY_ENTRY), SEEK_SET);<br>				<span class="hljs-built_in">fread</span>(&amp;tmp_entries_1, <span class="hljs-built_in">sizeof</span>(__IMAGE_RESOURCE_DIRECTORY_ENTRY), <span class="hljs-number">1</span>, pe_fp);<br><br>				<span class="hljs-keyword">if</span> (tmp_entries_1.DUMMYUNIONNAME.DUMMYSTRUCTNAME.NameIsString) {<br><br>					<span class="hljs-comment">// 资源名是字符串，解析字符串</span><br>					<span class="hljs-built_in">fseek</span>(pe_fp, start_pos + tmp_entries_1.DUMMYUNIONNAME.DUMMYSTRUCTNAME.NameOffset, SEEK_SET);<br>					WORD unicode_len;<br>					<span class="hljs-built_in">fread</span>(&amp;unicode_len, <span class="hljs-built_in">sizeof</span>(WORD), <span class="hljs-number">1</span>, pe_fp);<br>					<span class="hljs-type">wchar_t</span>* name_tmp = (<span class="hljs-type">wchar_t</span>*)<span class="hljs-built_in">malloc</span>(<span class="hljs-built_in">sizeof</span>(<span class="hljs-type">wchar_t</span>) * (unicode_len + <span class="hljs-number">1</span>));<br>					<span class="hljs-keyword">if</span> (!name_tmp) {<br>						<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Error: Name_tmp malloc failed!\n"</span>);<br>						<span class="hljs-built_in">exit</span>(<span class="hljs-number">-1</span>);<br>					}<br>					name_tmp[unicode_len] = <span class="hljs-number">0</span>;<br>					<span class="hljs-built_in">fread</span>(name_tmp, <span class="hljs-built_in">sizeof</span>(<span class="hljs-type">wchar_t</span>), unicode_len, pe_fp);<br>					<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"       - Name Entry: %ws\n"</span>, name_tmp);<br><br>				}<br>				<span class="hljs-keyword">else</span> {<br><br>					<span class="hljs-comment">// 资源名是数字</span><br>					<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"       - ID Entry: %03d\n"</span>, tmp_entries_1.DUMMYUNIONNAME.Id);<br><br>				}<br><br>				<span class="hljs-comment">// 最后一层资源</span><br><br>				<span class="hljs-keyword">if</span> (tmp_entries_1.DUMMYUNIONNAME2.DUMMYSTRUCTNAME2.DataIsDirectory) {<br><br>					___IMAGE_RESOURCE_DIRECTORY_ENTRY tmp_entries_2;<br>					___IMAGE_RESOURCE_DATA_ENTRY data_entry;<br><br>					<span class="hljs-built_in">fseek</span>(pe_fp, start_pos + tmp_entries_1.DUMMYUNIONNAME2.DUMMYSTRUCTNAME2.OffsetToDirectory + <span class="hljs-built_in">sizeof</span>(___IMAGE_RESOURCE_DIRECTORY), SEEK_SET);<br>					<span class="hljs-built_in">fread</span>(&amp;tmp_entries_2, <span class="hljs-built_in">sizeof</span>(tmp_entries_2), <span class="hljs-number">1</span>, pe_fp);<br><br>					<span class="hljs-built_in">fseek</span>(pe_fp, start_pos + tmp_entries_2.DUMMYUNIONNAME2.DUMMYSTRUCTNAME2.OffsetToDirectory, SEEK_SET);<br>					<span class="hljs-built_in">fread</span>(&amp;data_entry, <span class="hljs-built_in">sizeof</span>(data_entry), <span class="hljs-number">1</span>, pe_fp);<br><br>					<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"          - Resource's RVA: 0x%0X\n"</span>, data_entry.OffsetToData);<br>					<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"          - Resource's Size: 0x%0X\n"</span>, data_entry.Size);<br><br>				}<br><br>				<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"\n"</span>);<br>			}<br>		}<br>	}<br><br>	<span class="hljs-built_in">fprintf</span>(stdout, <span class="hljs-string">"\n==========END=========\n\n"</span>);<br><br>}<br></code></pre></td></tr></tbody></table></figure>
+
+<ul>
+<li>运行结果：</li>
+</ul>
+<p><img src="/2023/08/03/%E4%B8%80%E6%AD%A5%E4%B8%80%E6%AD%A5%E6%89%8B%E6%90%93%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84PE%E8%A7%A3%E6%9E%90%E5%99%A8/14.png" srcset="/img/loading.gif" lazyload></p>
+<p>至此，我们已经基本上完成了PE32文件的解析工作。</p>
+<h2 id="Step-4-解析PE32"><a href="#Step-4-解析PE32" class="headerlink" title="Step 4: 解析PE32+"></a>Step 4: 解析PE32+</h2><ul>
+<li><p>PE32+，i.e. 64位的PE文件</p>
+</li>
+<li><p>PE32与PE32+的区别：</p>
+<p><span class="github-emoji"><span>1⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0031-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> 第一个很显然的，<code>NT Header - Optional Header</code>的<code>Magic</code>字段不同，对于<code>PE32</code>来说是<code>10B（NT32）</code>，对于<code>PE32+</code>来说是<code>20B（NT64）</code>；</p>
+<p><span class="github-emoji"><span>2⃣</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/0032-20e3.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span> <code>PE32+</code>的<code>NT Header - Optional Header</code>与<code>PE32</code>不同，主要体现在：</p>
+<ul>
+<li><code>PE32</code>有一个字段为<code>BaseofData</code>，而<code>PE32+</code>没有（该4个字节给了<code>ImageBase</code>，因为<code>ImageBase</code>由4字节扩展到了8字节）；</li>
+<li><code>PE32+</code>中，<code>ImageBase</code>、<code>SizeOfStackReserve</code>、<code>SizeOfStackCommit</code>、<code>SizeOfHeapReserve</code>、<code>SizeOfHeapCommit</code>由4字节扩展到8字节，因此<code>PE32+</code>的<code>NT Header64</code>要比<code>PE32</code>的<code>NT Header32</code>多出 4*4 = 16字节（如前所述，<code>BaseofData</code>的字节已经分给了<code>ImageBase</code>）</li>
+<li>在<code>PE32+</code>中，导入表的导入查找表ITL为64位的数组，而在<code>PE32</code>中，其为32位数组，这里需要区分</li>
+</ul>
+</li>
+<li><p>因此，<code>PE32+</code>解析与<code>PE32</code>解析不同之处：</p>
+<ul>
+<li><code>NT Header</code>不同：主要指的是<code>Optional Header</code>，解析时需要单独处理</li>
+<li>导入查找表寻址：<code>PE32+</code>以64位进行寻址，而<code>PE32</code>以32位进行寻址</li>
+</ul>
+<p>根据上述不同，我们可以很容易发动CV技能（<span class="github-emoji"><span>😆</span><img src="https://github.githubassets.com/images/icons/emoji/unicode/1f606.png?v8" srcset="/img/loading.gif" lazyload aria-hidden="true" onerror="this.parent.classList.add('github-emoji-fallback')"></span>）实现对<code>PE32+</code>文件的解析</p>
+</li>
+</ul>
+<h2 id="References"><a href="#References" class="headerlink" title="References:"></a>References:</h2><ol>
+<li><a target="_blank" rel="noopener" href="https://0xrick.github.io/win-internals/pe2/">A dive into the PE file format - PE file structure - Part 1: Overview - 0xRick’s Blog</a></li>
+<li><a target="_blank" rel="noopener" href="https://0xrick.github.io/win-internals/pe3/">A dive into the PE file format - PE file structure - Part 2: DOS Header, DOS Stub and Rich Header - 0xRick’s Blog</a></li>
+<li><a target="_blank" rel="noopener" href="https://0xrick.github.io/win-internals/pe4/">A dive into the PE file format - PE file structure - Part 3: NT Headers - 0xRick’s Blog</a></li>
+<li><a target="_blank" rel="noopener" href="https://0xrick.github.io/win-internals/pe5/">A dive into the PE file format - PE file structure - Part 4: Data Directories, Section Headers and Sections - 0xRick’s Blog</a></li>
+<li><a target="_blank" rel="noopener" href="https://0xrick.github.io/win-internals/pe6/">A dive into the PE file format - PE file structure - Part 5: PE Imports (Import Directory Table, ILT, IAT) - 0xRick’s Blog</a></li>
+<li><a target="_blank" rel="noopener" href="https://0xrick.github.io/win-internals/pe7/">A dive into the PE file format - PE file structure - Part 6: PE Base Relocations - 0xRick’s Blog</a></li>
+<li>[<a target="_blank" rel="noopener" href="https://bbs.kanxue.com/thread-252795.htm#msg_header_h2_8">原创]打造自己的PE解析器-编程技术-看雪-安全社区|安全招聘|kanxue.com</a></li>
+<li>[PE-learning/PE learning at master · jmhIcoding/PE-learning (github.com)](<a target="_blank" rel="noopener" href="https://github.com/jmhIcoding/PE-learning/tree/master/PE">https://github.com/jmhIcoding/PE-learning/tree/master/PE</a> learning)</li>
+<li><a target="_blank" rel="noopener" href="https://0xrick.github.io/win-internals/pe8/#a-dive-into-the-pe-file-format---lab-1-writing-a-pe-parser">A dive into the PE file format - LAB 1: Writing a PE Parser - 0xRick’s Blog</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.virusbulletin.com/virusbulletin/2020/01/vb2019-paper-rich-headers-leveraging-mysterious-artifact-pe-format/">Virus Bulletin :: VB2019 paper: Rich Headers: leveraging this mysterious artifact of the PE format</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/zpchcbd/p/14674298.html">VirtualAddress与VirtualSize与SizeOfRawData与PointerToRawData的关系 - zpchcbd - 博客园 (cnblogs.com)</a></li>
+<li><a target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#special-sections">PE Format - Win32 apps | Microsoft Learn</a></li>
+<li><a target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#the-idata-section">PE Format - Win32 apps | Microsoft Learn</a></li>
+<li><a target="_blank" rel="noopener" href="https://learn.microsoft.com/zh-cn/windows/win32/debug/pe-format#the-edata-section-image-only">PE 格式 - Win32 apps | Microsoft Learn</a></li>
+<li><a target="_blank" rel="noopener" href="http://research32.blogspot.com/2015/01/base-relocation-table.html">research32: Base relocation table</a></li>
+<li><a target="_blank" rel="noopener" href="https://learn.microsoft.com/zh-cn/windows/win32/debug/pe-format#the-reloc-section-image-only">PE 格式 - Win32 apps | Microsoft Learn</a></li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/PE/">#PE</a>
+      
+        <a href="/tags/Windows/">#Windows</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>一步一步”手搓“一个简单的PE解析器</div>
+      <div>http://bladchan.github.io/2023/08/03/一步一步手搓一个简单的PE解析器/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>bladchan</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年8月3日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/07/20/%E5%85%B3%E4%BA%8EQEMU%E5%92%8CAFL-QEMU%E6%A8%A1%E5%BC%8F%E9%82%A3%E4%BA%9B%E4%BA%8B/" title="关于QEMU和AFL-QEMU模式那些事">
+                        <span class="hidden-mobile">关于QEMU和AFL-QEMU模式那些事</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  
+  
+    <article id="comments" lazyload>
+      
+  <div id="gitalk-container"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#gitalk-container', function() {
+      Fluid.utils.createCssLink('/css/gitalk.css')
+      Fluid.utils.createScript('https://lib.baomitu.com/gitalk/1.8.0/gitalk.min.js', function() {
+        var options = Object.assign(
+          {"clientID":"8fb1902edd5e2f4640d4","clientSecret":"c33eb5a729e618f3b25f5ed31b89ab8190617364","repo":"blog_comments","owner":"bladchan","admin":["bladchan"],"language":"zh-CN","labels":["Gitalk"],"perPage":10,"pagerDirection":"last","distractionFreeMode":false,"createIssueManually":true,"proxy":"https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token"},
+          {
+            id: '9561aba86b9ddcb2b47fc1ffe299979f'
+          }
+        )
+        var gitalk = new Gitalk(options);
+        gitalk.render('gitalk-container');
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+    </article>
+  
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Chan</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Powered by Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
